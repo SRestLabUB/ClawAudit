@@ -1,0 +1,5 @@
+severity,n,semgrep_pro_pct,semgrep_clawaudit_pct,codeql_secext_pct,codeql_clawaudit_pct
+critical,12,33.3,83.3,16.7,83.3
+high,134,26.1,67.2,13.4,73.9
+medium,250,19.2,63.6,13.2,76.8
+low,50,36.0,72.0,10.0,86.0

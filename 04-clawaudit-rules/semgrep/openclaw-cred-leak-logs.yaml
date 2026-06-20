@@ -1,0 +1,152 @@
+rules:
+  # ──────────────────────────────────────────────
+  # Cat-4 (supplement): Credentials & sensitive data exposure in logs
+  # The existing openclaw-ssrf.yaml covers Cat-4 SSRF.
+  # These rules cover the second half of Cat-4:
+  #   - hardcoded credentials
+  #   - sensitive data in logs / error messages
+  # Patterns derived from real OpenClaw GHSAs.
+  # ──────────────────────────────────────────────
+
+  # CL-1: A URL containing an embedded credential (Telegram bot token,
+  # basic-auth, api-key in path) is interpolated into an Error message
+  # or log line. The URL ends up in stack traces / log files, leaking
+  # the secret.
+  # Catches: GHSA-chf7-jq6g-qrwv (Telegram bot token via logs),
+  #          GHSA-xwcj-hwhf-h378 (Telegram media fetch errors leaked
+  #          tokens in URLs).
+  - id: url-with-secret-into-error-message
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: >
+      A URL is interpolated into an Error message or log without
+      redaction. URLs commonly carry secrets in the path or query
+      (e.g. https://api.telegram.org/bot<TOKEN>/..., basic-auth in
+      userinfo, ?api_key=...). The secret will end up in stack traces,
+      crash reports, and CI output. Pass the URL through redactUrl() /
+      redactSecret() before interpolating, or log only the host+path
+      without the credential segment.
+    metadata:
+      cwe:
+        - "CWE-532: Insertion of Sensitive Information into Log File"
+        - "CWE-200: Exposure of Sensitive Information to an Unauthorized Actor"
+      category: security
+      confidence: MEDIUM
+      impact: HIGH
+      cat: "Cat-4: Network & Communication"
+      example_advisory: "GHSA-chf7-jq6g-qrwv, GHSA-xwcj-hwhf-h378"
+    pattern-either:
+      - patterns:
+          - pattern-either:
+              - pattern: |
+                  new Error(`...${$URL}...`)
+              - pattern: |
+                  new $ERR(`...${$URL}...`)
+              - pattern: |
+                  new $ERR($CODE, `...${$URL}...`)
+              - pattern: |
+                  throw new Error(`...${$URL}...`)
+              - pattern: |
+                  throw new $ERR($CODE, `...${$URL}...`)
+          - metavariable-regex:
+              metavariable: $URL
+              regex: '^(url|fileUrl|requestUrl|fetchUrl|targetUrl|res\.url|response\.url)$'
+          - pattern-not-inside: |
+              redactUrl(...)
+          - pattern-not-inside: |
+              redactSecret(...)
+      - patterns:
+          - pattern-either:
+              - pattern: |
+                  $LOG.info(`...${$URL}...`, ...)
+              - pattern: |
+                  $LOG.warn(`...${$URL}...`, ...)
+              - pattern: |
+                  $LOG.error(`...${$URL}...`, ...)
+              - pattern: |
+                  console.log(`...${$URL}...`, ...)
+              - pattern: |
+                  console.error(`...${$URL}...`, ...)
+          - metavariable-regex:
+              metavariable: $URL
+              regex: '^(url|fileUrl|requestUrl|fetchUrl|telegramUrl|botUrl|response\.url|res\.url)$'
+          - pattern-not-inside: |
+              redactUrl(...)
+
+  # CL-2: An access token, API key, or password variable is logged
+  # directly. Common slip during debugging code.
+  - id: secret-variable-into-log
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: >
+      A variable whose name suggests a secret (token, apiKey, password,
+      secret, accessKey, privateKey) is passed to a logger or error.
+      Use a redacted accessor or omit from the log entirely.
+    metadata:
+      cwe:
+        - "CWE-532: Insertion of Sensitive Information into Log File"
+      category: security
+      confidence: HIGH
+      impact: HIGH
+      cat: "Cat-4: Network & Communication"
+    pattern-either:
+      - patterns:
+          - pattern-either:
+              - pattern: console.log($VAR, ...)
+              - pattern: console.warn($VAR, ...)
+              - pattern: console.error($VAR, ...)
+              - pattern: console.debug($VAR, ...)
+              - pattern: $LOG.info($VAR, ...)
+              - pattern: $LOG.warn($VAR, ...)
+              - pattern: $LOG.error($VAR, ...)
+              - pattern: $LOG.debug($VAR, ...)
+          - metavariable-regex:
+              metavariable: $VAR
+              regex: '^(token|apiKey|api_key|apikey|password|passwd|secret|accessToken|access_token|refreshToken|refresh_token|privateKey|private_key|botToken|bot_token|sessionKey|session_key)$'
+      - patterns:
+          - pattern-either:
+              - pattern: console.log(`...${$VAR}...`, ...)
+              - pattern: console.error(`...${$VAR}...`, ...)
+              - pattern: $LOG.info(`...${$VAR}...`, ...)
+              - pattern: $LOG.error(`...${$VAR}...`, ...)
+          - metavariable-regex:
+              metavariable: $VAR
+              regex: '^(token|apiKey|api_key|password|secret|accessToken|refreshToken|privateKey|botToken)$'
+
+  # CL-3: Hardcoded credential — string literal that looks like an
+  # API key, bearer token, or bot token assigned to a variable whose
+  # name suggests it is a secret.
+  - id: hardcoded-credential-literal
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: >
+      A string literal that looks like a credential (long alphanumeric
+      with prefixes such as "sk-", "ghp_", a Telegram bot-token shape,
+      or 32+ char hex/base64) is assigned to a secret-named variable.
+      Move secrets to environment variables / a secrets manager.
+    metadata:
+      cwe:
+        - "CWE-798: Use of Hard-coded Credentials"
+      category: security
+      confidence: MEDIUM
+      impact: HIGH
+      cat: "Cat-4: Network & Communication"
+    pattern-either:
+      - patterns:
+          - pattern: |
+              const $VAR = "$VALUE"
+          - metavariable-regex:
+              metavariable: $VAR
+              regex: '^(token|apiKey|api_key|secret|password|accessToken|refreshToken|privateKey|botToken|bearer|authToken)$'
+          - metavariable-regex:
+              metavariable: $VALUE
+              regex: '^(sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}|[0-9]{8,12}:[A-Za-z0-9_-]{30,}|[A-Fa-f0-9]{32,}|[A-Za-z0-9+/]{40,}={0,2})$'
+      - patterns:
+          - pattern: |
+              let $VAR = "$VALUE"
+          - metavariable-regex:
+              metavariable: $VAR
+              regex: '^(token|apiKey|api_key|secret|password|accessToken|refreshToken|privateKey|botToken)$'
+          - metavariable-regex:
+              metavariable: $VALUE
+              regex: '^(sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}|[0-9]{8,12}:[A-Za-z0-9_-]{30,})$'

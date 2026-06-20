@@ -1,0 +1,7 @@
+name: openclaw/custom-queries
+version: 0.1.0
+library: false
+dependencies:
+  codeql/javascript-all: "*"
+default-suite:
+  - queries: '.'

@@ -1,0 +1,189 @@
+rules:
+  # ──────────────────────────────────────────────
+  # CWE-863: Incorrect Authorization / Auth Bypass
+  # ──────────────────────────────────────────────
+
+  # AB-1: allowFrom/allowlist check that doesn't deny on miss
+  # Catches: GHSA-33rq-m5x2-fvgf (Twitch allowFrom not enforced)
+  #          GHSA-2prf-9cw7-fq62 (WhatsApp reaction JID bypass)
+  - id: allowlist-no-deny-on-miss
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      An allowFrom/allowlist check returns allowed:true when the sender
+      is in the list, but does not explicitly return allowed:false when
+      the sender is NOT in the list. This allows unauthorized users to
+      fall through to a default-allow path. Always return allowed:false
+      after an allowlist miss.
+    metadata:
+      cwe:
+        - "CWE-863: Incorrect Authorization"
+      confidence: MEDIUM
+      impact: HIGH
+      category: security
+    patterns:
+      - pattern: |
+          if ($LIST.includes($ID)) {
+            return { allowed: true, ... };
+          }
+      - pattern-not-inside: |
+          if ($LIST.includes($ID)) {
+            return { allowed: true, ... };
+          }
+          return { allowed: false, ... };
+      - pattern-not-inside: |
+          if ($LIST.includes($ID)) {
+            return { allowed: true, ... };
+          }
+          ...
+          throw ...;
+
+  # AB-2: Authorization function with default return allowed:true
+  # Catches: GHSA-33rq-m5x2-fvgf (Twitch default-allow)
+  - id: auth-function-default-allow
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      Authorization/access-control function defaults to returning
+      allowed:true. Authorization checks should fail-closed —
+      the default should be allowed:false. Only explicitly grant
+      access when conditions are met.
+    metadata:
+      cwe:
+        - "CWE-863: Incorrect Authorization"
+      confidence: MEDIUM
+      impact: HIGH
+      category: security
+    patterns:
+      - pattern: |
+          function $FUNC(...): $RET {
+            ...
+            return { allowed: true };
+          }
+      - metavariable-regex:
+          metavariable: $FUNC
+          regex: ".*(check|Check|authorize|Authorize|access|Access|control|Control|verify|Verify|policy|Policy|guard|Guard|gate|Gate).*"
+
+  # AB-3: Reaction/event handler missing authorization that message handler has
+  # Catches: GHSA-354r-7mfh-7rh2 (Discord DM reaction bypass)
+  #          GHSA-2prf-9cw7-fq62 (WhatsApp reaction bypass)
+  - id: reaction-handler-missing-auth-check
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      A reaction/event handler dispatches to the agent pipeline without
+      the same authorization checks (dmPolicy, allowFrom, groupPolicy)
+      that the corresponding message handler applies. Ensure all ingress
+      paths apply consistent authorization.
+    metadata:
+      cwe:
+        - "CWE-863: Incorrect Authorization"
+      confidence: MEDIUM
+      impact: HIGH
+      category: security
+    patterns:
+      - pattern: |
+          await $FUNC({
+            data: $DATA,
+            ...
+          })
+      - metavariable-regex:
+          metavariable: $FUNC
+          regex: ".*(Reaction|reaction).*Handler.*"
+      - pattern-not-inside: |
+          checkDmPolicy(...)
+          ...
+          await $FUNC(...)
+      - pattern-not-inside: |
+          applyDmAuthorizationGate(...)
+          ...
+          await $FUNC(...)
+
+  # AB-4: Group policy lookup using mutable displayName
+  # Catches: GHSA-52q4-3xjc-6778 (Google Chat displayName rebinding)
+  - id: group-policy-mutable-name-lookup
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      Group/space policy is resolved using a mutable displayName instead
+      of a stable immutable identifier (e.g., spaceId, groupId). An
+      attacker can change the displayName to match another group's policy
+      and bypass authorization. Use only stable IDs for policy lookups.
+    metadata:
+      cwe:
+        - "CWE-863: Incorrect Authorization"
+        - "CWE-639: Authorization Bypass Through User-Controlled Key"
+      confidence: MEDIUM
+      impact: HIGH
+      category: security
+    patterns:
+      - pattern-either:
+          - pattern: $ENTRIES[$GROUPNAME]
+          - pattern: $ENTRIES[$NAME?.trim()?.toLowerCase()]
+          - pattern: $ENTRIES[$DISPLAYNAME]
+      - metavariable-regex:
+          metavariable: $GROUPNAME
+          regex: ".*(name|Name|displayName|groupName|spaceName).*"
+      - pattern-not-inside: |
+          $ENTRIES[$GROUPID]
+
+  # AB-5: send/dispatch action without outbound target validation
+  # Catches: GHSA-2prf-9cw7-fq62 (WhatsApp reaction JID bypass)
+  - id: send-action-missing-target-validation
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      A send/reaction action uses a target identifier (chatJid, chatId,
+      channelId) from parameters without validating it against the
+      allowFrom configuration. All outbound actions must validate the
+      target with the appropriate authorization check.
+    metadata:
+      cwe:
+        - "CWE-863: Incorrect Authorization"
+      confidence: MEDIUM
+      impact: HIGH
+      category: security
+    patterns:
+      - pattern: |
+          const $TARGET = readStringParam($PARAMS, "chatJid", ...)
+          ...
+          await $SEND($TARGET, ...)
+      - pattern-not-inside: |
+          resolveWhatsAppOutboundTarget(...)
+      - pattern-not-inside: |
+          validateOutboundTarget(...)
+      - metavariable-regex:
+          metavariable: $SEND
+          regex: ".*(send|Send|react|React|reply|Reply).*"
+
+  # AB-6: Webhook handler without authentication/signature verification
+  # Catches: GHSA-3h52-cx59-c456 (Feishu unauthenticated body parsing)
+  - id: webhook-handler-no-auth
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      Webhook request body is parsed and processed before verifying the
+      request signature or authentication token. Always verify webhook
+      authenticity (HMAC signature, token, etc.) before parsing the
+      request body to prevent unauthenticated access and resource
+      consumption attacks.
+    metadata:
+      cwe:
+        - "CWE-306: Missing Authentication for Critical Function"
+        - "CWE-400: Uncontrolled Resource Consumption"
+      confidence: LOW
+      impact: HIGH
+      category: security
+    patterns:
+      - pattern: |
+          const $BODY = JSON.parse($REQ.body)
+          ...
+          $PROCESS($BODY)
+      - pattern-not-inside: |
+          verifySignature(...)
+          ...
+          const $BODY = JSON.parse($REQ.body)
+      - pattern-not-inside: |
+          validateWebhookToken(...)
+          ...
+          const $BODY = JSON.parse($REQ.body)

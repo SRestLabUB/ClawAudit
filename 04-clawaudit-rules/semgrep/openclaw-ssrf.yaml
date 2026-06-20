@@ -1,0 +1,157 @@
+rules:
+  # ──────────────────────────────────────────────
+  # CWE-918: Server-Side Request Forgery (SSRF)
+  # ──────────────────────────────────────────────
+
+  # SSRF-1: Direct fetch() on URL variable without SSRF guard
+  # Catches: GHSA-2858-xg23-26fp (camera URL host-binding bypass)
+  #          GHSA-56f2-hvwg-5743 (image tool SSRF)
+  - id: fetch-url-without-ssrf-guard
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      fetch() is called with a URL variable without SSRF protection.
+      Use fetchWithSsrFGuard() or equivalent to prevent requests to
+      internal/private network addresses (RFC1918, link-local, localhost,
+      cloud metadata endpoints).
+    metadata:
+      cwe:
+        - "CWE-918: Server-Side Request Forgery (SSRF)"
+      confidence: MEDIUM
+      impact: HIGH
+      category: security
+    patterns:
+      - pattern-either:
+          - pattern: await fetch($URL)
+          - pattern: await fetch($URL, ...)
+          - pattern: fetch($URL)
+          - pattern: fetch($URL, ...)
+      - pattern-not-inside: |
+          function fetchWithSsrFGuard(...) { ... }
+      - pattern-not-inside: |
+          function fetchWithGuard(...) { ... }
+      - pattern-not-inside: |
+          function guardedFetch(...) { ... }
+      # Exclude test files
+      - pattern-not-inside: |
+          describe(..., function() { ... })
+      - pattern-not-inside: |
+          it(..., function() { ... })
+      - pattern-not-inside: |
+          test(..., function() { ... })
+
+  # SSRF-2: fetchRemoteMedia without ssrfPolicy
+  # Catches: GHSA-56f2-hvwg-5743 (media fetch SSRF)
+  - id: fetch-remote-media-no-ssrf-policy
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      fetchRemoteMedia() is called without an ssrfPolicy parameter.
+      Add ssrfPolicy and lookupFn parameters to enable SSRF protection
+      for remote media fetching.
+    metadata:
+      cwe:
+        - "CWE-918: Server-Side Request Forgery (SSRF)"
+      confidence: HIGH
+      impact: HIGH
+      category: security
+    patterns:
+      - pattern: |
+          fetchRemoteMedia({
+            url: $URL,
+            ...
+          })
+      - pattern-not: |
+          fetchRemoteMedia({
+            url: $URL,
+            ...,
+            ssrfPolicy: ...,
+            ...
+          })
+
+  # SSRF-3: URL download with only protocol check (no host/IP validation)
+  # Catches: GHSA-2858-xg23-26fp (https-only check insufficient)
+  - id: url-download-protocol-only-check
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      URL validation checks only the protocol (https/http) but does not
+      validate the hostname or resolved IP against private ranges. An
+      attacker can still target internal services via https://localhost,
+      https://169.254.169.254, or https://10.x.x.x. Add hostname and
+      IP validation using isBlockedHostnameOrIp() or equivalent.
+    metadata:
+      cwe:
+        - "CWE-918: Server-Side Request Forgery (SSRF)"
+      confidence: HIGH
+      impact: HIGH
+      category: security
+    patterns:
+      - pattern: |
+          if ($PARSED.protocol !== "https:") {
+            throw ...;
+          }
+          ...
+          await fetch($URL)
+      - pattern-not-inside: |
+          isBlockedHostnameOrIp(...)
+      - pattern-not-inside: |
+          isPrivateIp(...)
+      - pattern-not-inside: |
+          fetchWithSsrFGuard(...)
+
+  # SSRF-4: Incomplete private IP check (missing IPv6 transition addresses)
+  # Catches: GHSA-8cp7-rp8r-mg77 (ISATAP bypass)
+  - id: incomplete-private-ip-check
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      Private IP validation handles IPv4 and basic IPv6 ranges but may
+      miss IPv6 transition mechanism addresses (ISATAP :5efe:, 6to4
+      2002::, Teredo 2001:0::). These can embed private IPv4 addresses
+      in IPv6 format to bypass SSRF filters. Check for all RFC 4213/5214
+      transition address formats.
+    metadata:
+      cwe:
+        - "CWE-918: Server-Side Request Forgery (SSRF)"
+      confidence: MEDIUM
+      impact: HIGH
+      category: security
+    patterns:
+      - pattern: |
+          $V4MAPPED = $IP.match(/.*ffff.*/);
+      - pattern-not-inside: |
+          ...
+          $ISATAP = $IP.match(/.*5efe.*/);
+
+  # SSRF-5: URL from external payload passed to fetch without host binding
+  # Catches: GHSA-2858-xg23-26fp (node camera URL)
+  #          GHSA-p25h-9q54-ffvw, GHSA-rf6h-5gpw-qrgq
+  - id: external-payload-url-fetch
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      A URL from an external payload (e.g., webhook, node message,
+      API response) is passed directly to a fetch/download function
+      without binding to the expected source host. Validate that the
+      URL hostname matches the expected source before fetching.
+    metadata:
+      cwe:
+        - "CWE-918: Server-Side Request Forgery (SSRF)"
+      confidence: MEDIUM
+      impact: HIGH
+      category: security
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $URL = $PAYLOAD.url
+              ...
+              await fetch($URL, ...)
+          - pattern: |
+              await fetch($PAYLOAD.url, ...)
+          - pattern: |
+              writeUrlToFile($PATH, $PAYLOAD.url)
+      - pattern-not-inside: |
+          validateUrlHostBinding(...)
+      - pattern-not-inside: |
+          fetchWithSsrFGuard(...)

@@ -1,0 +1,83 @@
+rules:
+  # Rule 1: Direct pattern match — variable assigned from <script> concatenation
+  # containing JSON.stringify, which doesn't escape </script>
+  - id: xss-json-stringify-in-inline-script
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      JSON.stringify() is used inside an inline <script> tag built via string
+      concatenation. JSON.stringify does NOT escape '</script>' sequences, so
+      a crafted input value containing '</script>' can break out of the script
+      context and execute arbitrary JavaScript (Stored XSS). Serve the data
+      via a separate JSON endpoint or use a script-context-safe escaper that
+      replaces '</' with '<\\/' or similar.
+    metadata:
+      cwe:
+        - "CWE-79: Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')"
+      confidence: HIGH
+      impact: HIGH
+      category: security
+      references:
+        - https://github.com/openclaw/openclaw/security/advisories/GHSA-37gc-85xm-2ww6
+    patterns:
+      - pattern-either:
+          # Pattern A: variable = `<script>` + ... (with JSON.stringify inside)
+          - patterns:
+              - pattern: |
+                  $VAR = `<script>` + ...;
+              - pattern-inside: |
+                  $VAR = ... + `...${JSON.stringify(...)}...` + ...;
+          # Pattern B: single template literal with <script> and JSON.stringify
+          - pattern: |
+              $VAR = `<script>...${JSON.stringify($DATA)}...</script>`;
+          # Pattern C: string literal "<script>" concatenated
+          - patterns:
+              - pattern: |
+                  $VAR = "<script>" + ...;
+              - pattern-inside: |
+                  $VAR = ... + `...${JSON.stringify(...)}...` + ...;
+
+  # Rule 2: Broader — any HTML string building that injects JSON.stringify
+  # into a string later inserted into HTML via slice/replace patterns
+  - id: xss-json-stringify-html-splice
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      A string containing JSON.stringify() output is spliced into an HTML
+      document. If this creates inline script content, JSON.stringify does
+      not prevent '</script>' breakout, enabling XSS. Use a JSON endpoint
+      or script-safe escaping.
+    metadata:
+      cwe:
+        - "CWE-79: Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')"
+      confidence: MEDIUM
+      impact: HIGH
+      category: security
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $SCRIPT = `<script>` + ...;
+              ...
+              `${$HTML.slice(...)}${$SCRIPT}${$HTML.slice(...)}`;
+          - pattern: |
+              $SCRIPT = `<script>` + ...;
+              ...
+              $RESULT = `${$SCRIPT}${$HTML}`;
+
+  # Rule 3: Regex fallback — catches any file building inline <script> with
+  # JSON.stringify regardless of exact AST shape
+  - id: xss-json-stringify-in-script-tag-regex
+    languages: [typescript, javascript]
+    severity: INFO
+    message: >
+      Inline <script> tag construction uses JSON.stringify(). JSON.stringify
+      does not escape '</script>', risking XSS via script-context breakout.
+    metadata:
+      cwe:
+        - "CWE-79: Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')"
+      confidence: LOW
+      impact: HIGH
+      category: security
+    patterns:
+      - pattern-regex: "<script>"
+      - pattern-regex: "JSON\\.stringify"

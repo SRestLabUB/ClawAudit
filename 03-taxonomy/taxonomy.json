@@ -1,0 +1,51 @@
+{
+  "name": "ClawAudit five-category vulnerability taxonomy for local LLM agent runtimes",
+  "derived_from": "STRIDE threat model applied to the agent-runtime data-flow diagram",
+  "boundary_decision_procedure": "Walk the five boundaries in order; the first sink that matches the missing guard determines the category.",
+  "categories": [
+    {
+      "id": "CAT-1",
+      "name": "Pre-prompt Sanitization Boundary (B1)",
+      "stride_threat": "Tampering",
+      "mediating_component": ["prompt builder", "memory writer"],
+      "decision_question": "Is this text safe to place in trusted instructions?",
+      "example_advisories": ["GHSA-2qj5-gwg2-xwc4", "GHSA-74xj-763f-264w"]
+    },
+    {
+      "id": "CAT-2",
+      "name": "Operand-to-Execution Boundary (B2)",
+      "stride_threat": "Tampering",
+      "mediating_component": ["tool dispatcher", "skill loader"],
+      "decision_question": "Is this operand safe to pass to the executor?",
+      "example_advisories": ["GHSA-4564-pvr2-qq4h", "GHSA-2mc2-g238-722j", "GHSA-w9cg-v44m-4qv8"]
+    },
+    {
+      "id": "CAT-3",
+      "name": "Action-to-Resource Confinement Boundary (B3)",
+      "stride_threat": "Elevation of Privilege",
+      "mediating_component": ["filesystem adapter", "sandbox manager", "parser-then-allocator", "interface bind"],
+      "decision_question": "Does this action stay inside its sandbox / path / size budget?",
+      "example_advisories": ["GHSA-vr7j-g7jv-h5mp", "GHSA-43x4-g22p-3hrq", "GHSA-9p3r-hh9g-5cmg", "GHSA-33hm-cq8r-wc49"]
+    },
+    {
+      "id": "CAT-4",
+      "name": "Action-to-Outbound Egress Boundary (B4)",
+      "stride_threat": "Information Disclosure",
+      "mediating_component": ["network client", "logger", "error formatter"],
+      "decision_question": "Is this URL / log line / error message safe to emit?",
+      "example_advisories": ["GHSA-3fv3-6p2v-gxwj", "GHSA-chf7-jq6g-qrwv", "GHSA-xwcj-hwhf-h378"]
+    },
+    {
+      "id": "CAT-5",
+      "name": "Caller-to-Handler Authorization Boundary (B5)",
+      "stride_threat": "Spoofing",
+      "mediating_component": ["permission gate", "route mount", "skill-install gate"],
+      "decision_question": "Is this caller allowed to invoke this handler?",
+      "example_advisories": ["GHSA-2ch6-x3g4-7759", "GHSA-3c6h-g97w-fg78", "GHSA-w6wx-jq6j-6mcj"]
+    }
+  ],
+  "excluded_stride_threats": {
+    "Denial of Service": "Manifests as resource exhaustion observable only at runtime; out of scope for static auditing.",
+    "Repudiation": "Concerns audit-logging integrity; orthogonal to the implementation weaknesses targeted here."
+  }
+}

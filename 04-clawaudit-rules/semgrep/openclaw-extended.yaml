@@ -1,0 +1,300 @@
+rules:
+  # ──────────────────────────────────────────────
+  # Extended rules ported from the high-impact CodeQL queries.
+  # Targets CWE-918 (SSRF), CWE-400 (DoS), CWE-208 (timing), CWE-863 (authz),
+  # CWE-1333 (ReDoS), CWE-330 (weak random), CWE-668 (port binding),
+  # CWE-798 (hardcoded creds).
+  # ──────────────────────────────────────────────
+
+  # EXT-1: JSON.parse on a variable without size guard
+  # Port of CodeQL json-parse-no-size-limit (170 advisory hits).
+  - id: json-parse-no-size-limit
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      JSON.parse() is called on a variable. If the source is a request body /
+      stream / external content, oversized or deeply nested JSON enables DoS.
+      Guard with maxBytes / contentLength / readResponseWithLimit first.
+    metadata:
+      cwe:
+        - "CWE-400: Uncontrolled Resource Consumption"
+      category: security
+      confidence: LOW
+      impact: MEDIUM
+      cat: "Cat-3: Permission & Isolation"
+    pattern-either:
+      - patterns:
+          - pattern: JSON.parse($X)
+          - pattern-not: JSON.parse("...")
+          - pattern-not-inside: |
+              if ($X.length < $LIMIT) { ... }
+          - pattern-not-inside: |
+              if ($SIZE < $LIMIT) { ... JSON.parse(...); ... }
+          - pattern-not-inside: |
+              readResponseWithLimit(...)
+
+  # EXT-2: new URL() built from a variable without host allowlist check
+  # Port of CodeQL url-no-host-allowlist (146 hits).
+  - id: url-no-host-allowlist
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      new URL(x) is constructed from a variable. Without an isAllowedHost /
+      isPrivateIp / hostAllowlist check on the resulting host, this enables SSRF.
+    metadata:
+      cwe:
+        - "CWE-918: Server-Side Request Forgery"
+      category: security
+      confidence: LOW
+      impact: HIGH
+      cat: "Cat-4: Network & Communication"
+    pattern-either:
+      - patterns:
+          - pattern: new URL($X, ...)
+          - pattern-not: new URL("...", ...)
+          - pattern-not-inside: |
+              isAllowedHost(...)
+          - pattern-not-inside: |
+              isPrivateIp(...)
+          - pattern-not-inside: |
+              assertExternalUrl(...)
+
+  # EXT-3: Equality comparison on secret-like identifier (timing attack)
+  # Port of CodeQL weak-token-comparison (73 hits).
+  - id: weak-token-comparison
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      Equality comparison (=== / !==) on a token / secret / hmac / signature
+      identifier enables timing attacks that leak the value one byte at a time.
+      Use crypto.timingSafeEqual(). CWE-208.
+    metadata:
+      cwe:
+        - "CWE-208: Observable Timing Discrepancy"
+      category: security
+      confidence: MEDIUM
+      impact: MEDIUM
+      cat: "Cat-5: Authentication & Authorization"
+    pattern-either:
+      - patterns:
+          - pattern-either:
+              - pattern: $TOKEN === $OTHER
+              - pattern: $TOKEN !== $OTHER
+              - pattern: $TOKEN == $OTHER
+              - pattern: $TOKEN != $OTHER
+          - metavariable-regex:
+              metavariable: $TOKEN
+              regex: '.*(token|secret|password|hmac|signature|apikey|api_key|hash|digest|mac).*'
+
+  # EXT-4: sendMessage / sendAction with non-literal target identifier
+  # Port of CodeQL send-action-no-target-validation (67 hits).
+  - id: send-action-no-target-validation
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      send*Message / send*Action / dispatch* called with a non-literal target
+      argument and no validateTarget / isAllowedTarget guard nearby. Allows
+      messages to be routed to attacker-chosen destinations. Cat-5.
+    metadata:
+      cwe:
+        - "CWE-863: Incorrect Authorization"
+      category: security
+      confidence: LOW
+      impact: HIGH
+      cat: "Cat-5: Authentication & Authorization"
+    pattern-either:
+      - patterns:
+          - pattern-either:
+              - pattern: sendMessage($T, ...)
+              - pattern: sendAction($T, ...)
+              - pattern: sendReply($T, ...)
+              - pattern: dispatchMessage($T, ...)
+              - pattern: dispatchAction($T, ...)
+          - pattern-not: sendMessage("...", ...)
+          - pattern-not: sendAction("...", ...)
+          - pattern-not-inside: |
+              validateTarget(...)
+          - pattern-not-inside: |
+              isAllowedTarget(...)
+      - patterns:
+          - pattern-either:
+              - pattern: $X.sendMessage($T, ...)
+              - pattern: $X.sendAction($T, ...)
+          - pattern-not: $X.sendMessage("...", ...)
+
+  # EXT-5: new RegExp() built from a non-literal source
+  # Port of CodeQL regex-from-user-input (40 hits). CWE-1333.
+  - id: regex-from-user-input
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      new RegExp(x) where x is not a string literal. If x is user-controlled,
+      both ReDoS (catastrophic backtracking) and regex injection are possible.
+    metadata:
+      cwe:
+        - "CWE-1333: Inefficient Regular Expression Complexity"
+        - "CWE-400: Uncontrolled Resource Consumption"
+      category: security
+      confidence: LOW
+      impact: MEDIUM
+      cat: "Cat-3: Permission & Isolation"
+    pattern-either:
+      - patterns:
+          - pattern: new RegExp($X, ...)
+          - pattern-not: new RegExp("...", ...)
+          - pattern-not: new RegExp(`...`, ...)
+
+  # EXT-6: server.listen(port, "0.0.0.0") binds all interfaces
+  # Port of CodeQL listen-bind-all-interfaces.
+  - id: listen-bind-all-interfaces
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      server.listen() bound to 0.0.0.0 or :: exposes the service on every
+      network interface. For local-only services this leaks endpoints. CWE-668.
+    metadata:
+      cwe:
+        - "CWE-668: Exposure of Resource to Wrong Sphere"
+      category: security
+      confidence: HIGH
+      impact: MEDIUM
+      cat: "Cat-3: Permission & Isolation"
+    pattern-either:
+      - pattern: $X.listen($PORT, "0.0.0.0", ...)
+      - pattern: $X.listen($PORT, '0.0.0.0', ...)
+      - pattern: $X.listen($PORT, "::", ...)
+      - pattern: $X.listen($PORT, "::0", ...)
+
+  # EXT-7: Math.random used to produce a secret-like value
+  # Port of CodeQL math-random-for-secret. CWE-330.
+  - id: math-random-for-secret
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: >
+      Math.random() is not cryptographically secure. Assigning its output to a
+      token / nonce / sessionId / requestId / csrf allows predict-and-replay.
+      Use crypto.randomBytes() / crypto.randomUUID(). CWE-330.
+    metadata:
+      cwe:
+        - "CWE-330: Use of Insufficiently Random Values"
+      category: security
+      confidence: MEDIUM
+      impact: HIGH
+      cat: "Cat-4: Network & Communication"
+    pattern-either:
+      - patterns:
+          - pattern-either:
+              - pattern: const $TOK = Math.random()
+              - pattern: let $TOK = Math.random()
+              - pattern: const $TOK = $X(Math.random(), ...)
+              - pattern: const $TOK = Math.random().$M(...)
+          - metavariable-regex:
+              metavariable: $TOK
+              regex: '.*(token|nonce|sessionId|sessionKey|secret|requestId|csrf|otp).*'
+
+  # EXT-8: Hardcoded credential literal assigned to secret-named var
+  # Port of CodeQL hardcoded-credential-literal. CWE-798.
+  - id: hardcoded-credential-literal
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: >
+      Long string literal that matches a known token shape (sk-..., ghp_...,
+      xox?-..., Telegram bot-token, 32+ char hex/base64) assigned to a
+      credential-named variable. CWE-798.
+    metadata:
+      cwe:
+        - "CWE-798: Use of Hard-coded Credentials"
+      category: security
+      confidence: HIGH
+      impact: HIGH
+      cat: "Cat-4: Network & Communication"
+    pattern-either:
+      - patterns:
+          - pattern: const $VAR = "$VAL"
+          - metavariable-regex:
+              metavariable: $VAR
+              regex: '^(token|apiKey|api_key|secret|password|accessToken|refreshToken|privateKey|botToken|bearer|authToken)$'
+          - metavariable-regex:
+              metavariable: $VAL
+              regex: '(sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}|[0-9]{8,12}:[A-Za-z0-9_-]{30,}|[A-Fa-f0-9]{32,})'
+
+  # EXT-9: Webhook / route handler missing auth call
+  # Port of CodeQL webhook-handler-no-auth (the original semgrep version was
+  # narrower).
+  - id: webhook-handler-no-auth-broad
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      Function whose name suggests it handles a webhook / message / event /
+      reaction, but whose body contains no auth-related call (isAuthenticated,
+      requireAuth, allowFrom, hasPermission, authorize). Cat-5.
+    metadata:
+      cwe:
+        - "CWE-862: Missing Authorization"
+      category: security
+      confidence: LOW
+      impact: HIGH
+      cat: "Cat-5: Authentication & Authorization"
+    patterns:
+      - pattern-either:
+          - pattern: |
+              function handleWebhook(...) { ... }
+          - pattern: |
+              function handleHook(...) { ... }
+          - pattern: |
+              function handleMessage(...) { ... }
+          - pattern: |
+              function handleUpdate(...) { ... }
+          - pattern: |
+              function handleEvent(...) { ... }
+          - pattern: |
+              function handleReaction(...) { ... }
+          - pattern: |
+              function onWebhook(...) { ... }
+          - pattern: |
+              function onMessage(...) { ... }
+          - pattern: |
+              function onReaction(...) { ... }
+          - pattern: |
+              function processWebhook(...) { ... }
+          - pattern: |
+              function processMessage(...) { ... }
+      - pattern-not-inside: |
+          isAuthenticated(...)
+      - pattern-not-inside: |
+          requireAuth(...)
+      - pattern-not-inside: |
+          allowFrom(...)
+      - pattern-not-inside: |
+          authorize(...)
+
+  # EXT-10: Error stack / message returned in HTTP response or chat reply
+  - id: error-stack-in-response
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      Response / reply call interpolates err.stack or err.message — exposes
+      internal paths, env vars, and config to the caller. CWE-209.
+    metadata:
+      cwe:
+        - "CWE-209: Generation of Error Message Containing Sensitive Information"
+        - "CWE-200: Exposure of Sensitive Information"
+      category: security
+      confidence: MEDIUM
+      impact: MEDIUM
+      cat: "Cat-4: Network & Communication"
+    pattern-either:
+      - pattern: |
+          $X.send(`...${$ERR.stack}...`, ...)
+      - pattern: |
+          $X.send(`...${$ERR.message}...`, ...)
+      - pattern: |
+          $X.json({ ..., error: $ERR.stack, ... })
+      - pattern: |
+          $X.json({ ..., error: $ERR.message, ... })
+      - pattern: |
+          $X.reply(`...${$ERR.stack}...`, ...)
+      - pattern: |
+          res.send(err.stack)
+      - pattern: |
+          res.send(err.message)

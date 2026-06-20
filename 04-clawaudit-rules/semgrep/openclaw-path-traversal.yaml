@@ -1,0 +1,118 @@
+rules:
+  # ──────────────────────────────────────────────
+  # CWE-22: Path Traversal
+  # ──────────────────────────────────────────────
+
+  # PT-1: path.join with untrusted input without boundary check
+  # Catches: GHSA-xw4p-pw82-hqr7 (skill name path traversal)
+  #          GHSA-33hm-cq8r-wc49 (temp path traversal)
+  - id: path-join-user-input-no-boundary-check
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      path.join() uses a variable that may contain user-controlled input
+      without verifying the result stays within the intended directory.
+      An attacker could use '../' sequences or absolute paths to write
+      outside the target directory. Validate with path.relative() or
+      use a boundary-checked helper like resolvePathWithinRoot().
+    metadata:
+      cwe:
+        - "CWE-22: Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')"
+      confidence: MEDIUM
+      impact: HIGH
+      category: security
+    patterns:
+      - pattern: path.join($BASE, $INPUT)
+      - pattern-not-inside: |
+          if (path.relative($BASE, $RESOLVED).startsWith("..")) { ... }
+      - pattern-not-inside: |
+          if (!$RESOLVED.startsWith($BASE)) { ... }
+      - pattern-not-inside: |
+          assertSandboxPath(...)
+      - pattern-not-inside: |
+          resolvePathWithinRoot(...)
+      - metavariable-regex:
+          metavariable: $INPUT
+          regex: ".*(name|Name|path|Path|file|File|dir|Dir|input|entry|candidate|slug).*"
+
+  # PT-2: User-controlled path passed to file write without boundary check
+  # Catches: GHSA-xwjm-j929-xq7c (browser download path traversal)
+  #          GHSA-64qx-vpxx-mvqf (session file path traversal)
+  - id: user-path-to-file-write-no-boundary
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      A user-controlled path is passed to a file write/download operation
+      without path boundary validation. Use resolvePathWithinRoot() or
+      validate that the resolved path stays within the intended directory.
+    metadata:
+      cwe:
+        - "CWE-22: Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')"
+      confidence: MEDIUM
+      impact: HIGH
+      category: security
+    pattern-either:
+      - patterns:
+          - pattern: |
+              fs.writeFileSync($PATH, ...)
+          - pattern-not-inside: |
+              $PATH = resolvePathWithinRoot(...)
+          - pattern-not-inside: |
+              assertSandboxPath({filePath: $PATH, ...})
+      - patterns:
+          - pattern: |
+              await fs.writeFile($PATH, ...)
+          - pattern-not-inside: |
+              $PATH = resolvePathWithinRoot(...)
+          - pattern-not-inside: |
+              assertSandboxPath({filePath: $PATH, ...})
+
+  # PT-3: path.resolve with user input missing relative() containment check
+  # Catches: GHSA-64qx-vpxx-mvqf (session path escape)
+  - id: path-resolve-missing-containment
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      path.resolve() is used with user-controlled input but the result
+      is not validated to stay within the base directory. Check with
+      path.relative() that the result does not start with '..' and
+      also validate against symlink escapes.
+    metadata:
+      cwe:
+        - "CWE-22: Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')"
+      confidence: MEDIUM
+      impact: HIGH
+      category: security
+    patterns:
+      - pattern: |
+          const $RESOLVED = path.resolve($BASE, $INPUT);
+      - pattern-not-inside: |
+          const $REL = path.relative($BASE, $RESOLVED);
+          if ($REL.startsWith("..") || ...) { ... }
+      - pattern-not-inside: |
+          if (!$RESOLVED.startsWith($BASE)) { ... }
+
+  # PT-4: Incomplete path boundary check (string startsWith only, no symlink/realpath)
+  # Catches: GHSA-h3x4-hc5v-v2gm (media web path traversal)
+  - id: path-boundary-startswith-only
+    languages: [typescript, javascript]
+    severity: INFO
+    message: >
+      Path boundary check uses only string comparison (startsWith)
+      without resolving symlinks first. Symlinks can bypass string-based
+      path containment checks. Use fs.realpath() before comparison and
+      also check for hardlinks (stat.nlink > 1).
+    metadata:
+      cwe:
+        - "CWE-22: Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')"
+        - "CWE-59: Improper Link Resolution Before File Access ('Link Following')"
+      confidence: LOW
+      impact: HIGH
+      category: security
+    patterns:
+      - pattern: |
+          $RESOLVED.startsWith($ROOT + path.sep)
+      - pattern-not-inside: |
+          $RESOLVED = await fs.realpath(...)
+          ...
+          $RESOLVED.startsWith($ROOT + path.sep)

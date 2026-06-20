@@ -1,0 +1,129 @@
+rules:
+  # ──────────────────────────────────────────────
+  # CWE-78: Command Injection
+  # ──────────────────────────────────────────────
+
+  # CI-1: execSync with template literal string (shell injection)
+  # Catches: GHSA-4564-pvr2-qq4h (keychain credential injection)
+  - id: execsync-template-literal
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: >
+      execSync() is called with a template literal string containing
+      interpolated variables. This enables shell injection if any
+      variable contains shell metacharacters. Use execFileSync() with
+      an argument array instead.
+    metadata:
+      cwe:
+        - "CWE-78: Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')"
+      confidence: HIGH
+      impact: HIGH
+      category: security
+    patterns:
+      - pattern: |
+          execSync(`...${$VAR}...`, ...)
+      - pattern-not-inside: |
+          function test(...) { ... }
+
+  # CI-2: SCP/SSH spawn with unvalidated remote host
+  # Catches: GHSA-2mc2-g238-722j (SCP host injection)
+  - id: scp-ssh-unvalidated-remote-host
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: >
+      SCP/SSH spawn uses an unvalidated remote host variable in the
+      command arguments. The remote host must be validated and
+      normalized (e.g., with normalizeScpRemoteHost()) before use
+      to prevent command injection via crafted hostnames.
+    metadata:
+      cwe:
+        - "CWE-78: Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')"
+      confidence: HIGH
+      impact: HIGH
+      category: security
+    pattern-either:
+      - patterns:
+          - pattern: |
+              spawn("scp", [..., `${$HOST}:${$PATH}`, ...], ...)
+          - pattern-not-inside: |
+              $HOST = normalizeScpRemoteHost(...)
+      - patterns:
+          - pattern: |
+              spawn("/usr/bin/scp", [..., `${$HOST}:${$PATH}`, ...], ...)
+          - pattern-not-inside: |
+              $HOST = normalizeScpRemoteHost(...)
+
+  # CI-3: SCP with StrictHostKeyChecking=accept-new (MITM)
+  # Catches: GHSA-2mc2-g238-722j
+  - id: scp-ssh-accept-new-host-key
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      SCP/SSH uses StrictHostKeyChecking=accept-new which auto-accepts
+      unknown host keys on first connection, enabling MITM attacks.
+      Use StrictHostKeyChecking=yes instead.
+    metadata:
+      cwe:
+        - "CWE-295: Improper Certificate Validation"
+      confidence: HIGH
+      impact: MEDIUM
+      category: security
+    pattern-either:
+      - pattern: |
+          "StrictHostKeyChecking=accept-new"
+      - pattern: |
+          `StrictHostKeyChecking=accept-new`
+
+  # CI-4: Dangerous env var names not blocked in config application
+  # Catches: GHSA-w9cg-v44m-4qv8 (BASH_ENV injection)
+  - id: env-vars-no-dangerous-name-check
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      Environment variables from config are applied to process.env
+      without checking for dangerous variable names. Variables like
+      BASH_ENV, ENV, PYTHONSTARTUP, LD_PRELOAD, DYLD_INSERT_LIBRARIES
+      can execute arbitrary code when a subprocess starts. Filter with
+      isDangerousHostEnvVarName() or equivalent.
+    metadata:
+      cwe:
+        - "CWE-78: Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')"
+      confidence: MEDIUM
+      impact: HIGH
+      category: security
+    patterns:
+      - pattern: |
+          for (const [$KEY, $VALUE] of Object.entries($ENTRIES)) {
+            ...
+            $ENV[$KEY] = $VALUE;
+          }
+      - pattern-not-inside: |
+          isDangerousHostEnvVarName($KEY)
+      - pattern-not-inside: |
+          sanitizeHostExecEnv(...)
+      - metavariable-regex:
+          metavariable: $ENV
+          regex: ".*(env|ENV|process\\.env).*"
+
+  # CI-5: spawn with shell:true
+  # (Semgrep Pro has this, but we add context-aware version)
+  - id: spawn-shell-true-with-user-input
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      spawn() is called with shell:true and arguments that may contain
+      user-controlled data. Use spawn() without shell:true and pass
+      arguments as an array to avoid shell injection.
+    metadata:
+      cwe:
+        - "CWE-78: Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')"
+      confidence: MEDIUM
+      impact: HIGH
+      category: security
+    patterns:
+      - pattern: |
+          spawn($CMD, $ARGS, { ..., shell: true, ... })
+      - pattern-not-inside: |
+          function test(...) { ... }
+      - pattern-not-inside: |
+          describe(..., function() { ... })

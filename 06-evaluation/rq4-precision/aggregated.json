@@ -1,0 +1,665 @@
+{
+  "labels": [
+    {
+      "idx": 1,
+      "tool": "semgrep",
+      "rule_id": "path-join-user-input-no-boundary-check",
+      "verdict": "FP",
+      "confidence": "high",
+      "reason": "Destination uses path.basename() of files filtered by strict YYYY-MM-DD regex inside a CLI runtime, so no '../' or absolute path can reach path.join."
+    },
+    {
+      "idx": 2,
+      "tool": "semgrep",
+      "rule_id": "json-parse-no-size-limit",
+      "verdict": "FP",
+      "confidence": "high",
+      "reason": "JSON.parse runs in a local /scripts/ build tool on a baseline file read from disk, not a request body or external stream."
+    },
+    {
+      "idx": 3,
+      "tool": "semgrep",
+      "rule_id": "user-path-to-file-write-no-boundary",
+      "verdict": "FP",
+      "confidence": "medium",
+      "reason": "plistPath is derived by resolveLaunchAgentPlistPathForLabel from operator env/label in a local daemon setup writing to ~/Library, not user-controlled web input."
+    },
+    {
+      "idx": 4,
+      "tool": "semgrep",
+      "rule_id": "weak-token-comparison",
+      "verdict": "FP",
+      "confidence": "high",
+      "reason": "The !== 'none' check compares a categorical tokenSource discriminator string to a literal, not a secret/token value, so no timing leak applies."
+    },
+    {
+      "idx": 5,
+      "tool": "semgrep",
+      "rule_id": "url-with-secret-into-error-message",
+      "verdict": "FP",
+      "confidence": "medium",
+      "reason": "URL is a validated camera-node https URL (host-pinned, no auth/token semantics) interpolated into a local CLI download error, not a credentialed API URL."
+    },
+    {
+      "idx": 6,
+      "tool": "semgrep",
+      "rule_id": "external-payload-url-fetch",
+      "verdict": "TP",
+      "confidence": "medium",
+      "reason": "video.url from external AI provider response is fetched directly without hostname allowlist or validation against the configured provider host."
+    },
+    {
+      "idx": 7,
+      "tool": "semgrep",
+      "rule_id": "fetch-url-without-ssrf-guard",
+      "verdict": "FP",
+      "confidence": "high",
+      "reason": "This is a release verification script under scripts/lib invoked by maintainers with operator-trusted CLI args and known clawhub registry URLs, not a runtime request handler."
+    },
+    {
+      "idx": 8,
+      "tool": "semgrep",
+      "rule_id": "workspace-path-into-system-prompt",
+      "verdict": "FP",
+      "confidence": "high",
+      "reason": "session.cwd is explicitly wrapped in sanitizeForPromptLiteral() before being interpolated into the prompt line."
+    },
+    {
+      "idx": 9,
+      "tool": "semgrep",
+      "rule_id": "path-resolve-missing-containment",
+      "verdict": "FP",
+      "confidence": "medium",
+      "reason": "path.resolve operates on tokens parsed from a local node_modules .cmd shim wrapper file, an operator-installed trusted source, and the candidate is gated by isFilePath; no untrusted user input flows here."
+    },
+    {
+      "idx": 10,
+      "tool": "semgrep",
+      "rule_id": "url-no-host-allowlist",
+      "verdict": "FP",
+      "confidence": "high",
+      "reason": "new URL is used only to parse a dispatcher-path URL against a localhost base for query extraction; no fetch is made with this URL, so SSRF does not apply."
+    },
+    {
+      "idx": 11,
+      "tool": "semgrep",
+      "rule_id": "untrusted-header-into-log",
+      "verdict": "FP",
+      "confidence": "high",
+      "reason": "All header values are passed through the formatForLog() neutralization helper before interpolation into the log string."
+    },
+    {
+      "idx": 12,
+      "tool": "semgrep",
+      "rule_id": "realpath-without-hardlink-check",
+      "verdict": "TP",
+      "confidence": "medium",
+      "reason": "fs.realpathSync is used for an approval-boundary script operand, but only isFile()/sha is checked; stat.nlink === 1 is not verified, matching the rule's hardlink-bypass pattern."
+    },
+    {
+      "idx": 13,
+      "tool": "semgrep",
+      "rule_id": "browser-output-path-no-symlink-guard",
+      "verdict": "FP",
+      "confidence": "medium",
+      "reason": "The output path is resolved via resolveWritableOutputPathOrRespond(rootDir,...), the project-standard root-scoped writable-path helper, before being passed to traceStopViaPlaywright."
+    },
+    {
+      "idx": 14,
+      "tool": "semgrep",
+      "rule_id": "regex-from-user-input",
+      "verdict": "FP",
+      "confidence": "high",
+      "reason": "new RegExp() arguments come from marker.pattern.source/flags where marker iterates over the hardcoded INLINE_MARKERS constant defined in the same module, not user input."
+    },
+    {
+      "idx": 15,
+      "tool": "semgrep",
+      "rule_id": "webhook-handler-no-auth-broad",
+      "verdict": "FP",
+      "confidence": "high",
+      "reason": "This is the exported `testing` (__testing) processMessage wrapper for an operator-authenticated Zalo account context, not an externally exposed webhook handler."
+    },
+    {
+      "idx": 16,
+      "tool": "semgrep",
+      "rule_id": "env-vars-no-dangerous-name-check",
+      "verdict": "FP",
+      "confidence": "high",
+      "reason": "Code aggregates a Record of provider env-var name lists for manifest metadata; it never writes values into process.env, so the dangerous-env-name rule does not apply."
+    },
+    {
+      "idx": 17,
+      "tool": "semgrep",
+      "rule_id": "sensitive-file-write-no-mode-restriction",
+      "verdict": "FP",
+      "confidence": "medium",
+      "reason": "The writeFile truncates an already-existing session file (hadSessionFile guard true) so the prior 0o600 mode is preserved; surrounding writes also pass {mode:0o600}."
+    },
+    {
+      "idx": 18,
+      "tool": "semgrep",
+      "rule_id": "auth-function-default-allow",
+      "verdict": "FP",
+      "confidence": "high",
+      "reason": "applyEventAuthModeToSenderGate intentionally downgrades a failed sender gate to allowed:true with effect:'ignore' only for non-inbound events that are authorized by other gates (command/origin/route), as the comment documents."
+    },
+    {
+      "idx": 19,
+      "tool": "semgrep",
+      "rule_id": "reaction-handler-missing-auth-check",
+      "verdict": "FP",
+      "confidence": "high",
+      "reason": "The listener.handle just forwards to runDiscordReactionHandler -> handleDiscordReactionEvent, which receives dmPolicy/allowFrom/groupPolicy and calls authorizeDiscordReactionIngress; auth is performed downstream on the same path."
+    },
+    {
+      "idx": 20,
+      "tool": "semgrep",
+      "rule_id": "send-action-no-target-validation",
+      "verdict": "FP",
+      "confidence": "medium",
+      "reason": "client.sendMessage is the internal Matrix transport layer using a roomId resolved by resolveMatrixRoomId from the caller-supplied target; target authorization is the responsibility of upstream callers, not this low-level send helper."
+    },
+    {
+      "idx": 21,
+      "tool": "semgrep",
+      "rule_id": "allowlist-no-deny-on-miss",
+      "verdict": "FP",
+      "confidence": "high",
+      "reason": "Function delegates non-wildcard fall-through to resolveAllowlistMatchByCandidates which returns allowed:false on miss; empty list also explicitly returns allowed:false at line 81."
+    },
+    {
+      "idx": 22,
+      "tool": "semgrep",
+      "rule_id": "file-write-without-symlink-protection",
+      "verdict": "FP",
+      "confidence": "high",
+      "reason": "Write occurs in a developer/CI regression script (scripts/check-gateway-watch-regression.mjs) targeting an operator-controlled outputDir, not production runtime."
+    },
+    {
+      "idx": 23,
+      "tool": "semgrep",
+      "rule_id": "path-boundary-startswith-only",
+      "verdict": "TP",
+      "confidence": "low",
+      "reason": "Boundary check uses startsWith on path.resolve without realpath; though inputs are internal manifest-derived, the rule's literal pattern matches and symlinks under bundledPluginsDir could bypass the check."
+    },
+    {
+      "idx": 24,
+      "tool": "semgrep",
+      "rule_id": "chrome-no-sandbox-without-validation",
+      "verdict": "FP",
+      "confidence": "high",
+      "reason": "--no-sandbox appears in scripts/dev/realtime-talk-live-smoke.ts, a developer smoke-test script, not production runtime."
+    },
+    {
+      "idx": 25,
+      "tool": "semgrep",
+      "rule_id": "resource-link-metadata-into-prompt",
+      "verdict": "FP",
+      "confidence": "high",
+      "reason": "Title and uri are sanitized via escapeResourceTitle() and escapeInlineControlChars() before interpolation, so attacker-influenced metadata is already escaped."
+    },
+    {
+      "idx": 26,
+      "tool": "codeql",
+      "rule_id": "openclaw/allowlist-no-deny-on-miss",
+      "verdict": "FP",
+      "confidence": "high",
+      "reason": "Function returns a safe restrictive default sandbox mode ('workspace-write') when no allowed mode matches; this is deny-by-default-to-safe-mode, not a missing deny."
+    },
+    {
+      "idx": 27,
+      "tool": "codeql",
+      "rule_id": "openclaw/scp-ssh-unvalidated-host",
+      "verdict": "FP",
+      "confidence": "high",
+      "reason": "safeRemoteHost and safeRemotePath are validated by normalizeScpRemoteHost/normalizeScpRemotePath and rejected if falsy, and the spawn uses '--' separator plus StrictHostKeyChecking=yes."
+    },
+    {
+      "idx": 28,
+      "tool": "codeql",
+      "rule_id": "openclaw/path-resolve-no-containment",
+      "verdict": "FP",
+      "confidence": "high",
+      "reason": "The path.resolve(root, relative) result is immediately passed to assertSandboxPath which enforces workspace containment before fs.mkdir."
+    },
+    {
+      "idx": 29,
+      "tool": "codeql",
+      "rule_id": "openclaw/execsync-template-literal",
+      "verdict": "FP",
+      "confidence": "high",
+      "reason": "The template literal interpolates only the module-level constant FTS_TABLE into a DROP TABLE statement on a local sqlite handle; no user/untrusted input is in the command."
+    },
+    {
+      "idx": 30,
+      "tool": "codeql",
+      "rule_id": "openclaw/webhook-handler-no-auth",
+      "verdict": "FP",
+      "confidence": "high",
+      "reason": "handleMessage is a private client-side WebSocket message dispatcher in browser UI processing replies from an already-authenticated Google Live session, not an unauthenticated webhook endpoint."
+    },
+    {
+      "idx": 31,
+      "tool": "codeql",
+      "rule_id": "openclaw/path-join-no-containment",
+      "verdict": "FP",
+      "confidence": "high",
+      "reason": "targetGlobalRoot is derived from package-manager probe output (npm/pnpm/bun global root) joined with a constant PRIMARY_PACKAGE_NAME \u2014 not user-controlled input requiring containment."
+    },
+    {
+      "idx": 32,
+      "tool": "codeql",
+      "rule_id": "openclaw/sensitive-file-write-no-mode",
+      "verdict": "FP",
+      "confidence": "high",
+      "reason": "tokenSummaryPath is a QA token-efficiency metrics report (JSON of throughput stats), not a credential/secret file \u2014 rule misfired on the substring 'token'."
+    },
+    {
+      "idx": 33,
+      "tool": "codeql",
+      "rule_id": "openclaw/regex-from-user-input",
+      "verdict": "FP",
+      "confidence": "high",
+      "reason": "The RegExp source is built from a hardcoded const tuple of literal tag names ['system-reminder','previous_response'] joined with '|' \u2014 no user input flows into the pattern."
+    },
+    {
+      "idx": 34,
+      "tool": "codeql",
+      "rule_id": "openclaw/realpath-no-symlink-guard",
+      "verdict": "FP",
+      "confidence": "medium",
+      "reason": "realpath is used inside resolvePathForContainment specifically to canonicalize before containment comparison \u2014 that is the symlink-defeating mechanism, lstat is not the right guard here."
+    },
+    {
+      "idx": 35,
+      "tool": "codeql",
+      "rule_id": "openclaw/weak-token-comparison",
+      "verdict": "FP",
+      "confidence": "high",
+      "reason": "'token' here is a CLI argv token from readTrimmedArgToken being compared to literal strings ('exec','dlx','node','--'), not a secret/auth token \u2014 no timing attack surface."
+    },
+    {
+      "idx": 1,
+      "tool": "codeql",
+      "rule_id": "openclaw/file-write-no-symlink-protection",
+      "verdict": "FP",
+      "confidence": "high",
+      "reason": "Build/doc-generation script (.mjs in scripts/) writing to repo-controlled paths under ROOT/REFERENCE_DIR, not production runtime nor user-controlled paths."
+    },
+    {
+      "idx": 2,
+      "tool": "codeql",
+      "rule_id": "openclaw/fetch-no-ssrf-guard",
+      "verdict": "FP",
+      "confidence": "high",
+      "reason": "URL resolves to Anthropic's API endpoint from operator-configured baseUrl (default trusted), used for outbound provider API call with API key auth, not user-controllable SSRF input."
+    },
+    {
+      "idx": 3,
+      "tool": "codeql",
+      "rule_id": "openclaw/url-no-host-allowlist",
+      "verdict": "FP",
+      "confidence": "high",
+      "reason": "The new URL(params.url) is immediately used to derive allowedHostnames passed to fetchWithSsrFGuard, which is the SSRF guard itself - this is the helper enforcing the allowlist."
+    },
+    {
+      "idx": 4,
+      "tool": "codeql",
+      "rule_id": "openclaw/reaction-handler-no-auth",
+      "verdict": "FP",
+      "confidence": "high",
+      "reason": "File is monitor-handler.test-helpers.ts importing vitest and creating mock activity handlers for tests; not a production reaction handler path."
+    },
+    {
+      "idx": 5,
+      "tool": "codeql",
+      "rule_id": "openclaw/error-stack-in-response",
+      "verdict": "TP",
+      "confidence": "medium",
+      "reason": "res.end(error.message) writes upstream connection error message directly into the proxy response body, leaking internal error details to the client."
+    },
+    {
+      "idx": 41,
+      "tool": "codeql",
+      "rule_id": "openclaw/sandbox-mode-default-off",
+      "verdict": "TP",
+      "confidence": "medium",
+      "reason": "Passes 'isolated: false' literal to ensureCodexPluginActivation request, disabling sandbox isolation for migration apply."
+    },
+    {
+      "idx": 42,
+      "tool": "codeql",
+      "rule_id": "openclaw/env-vars-no-dangerous-check",
+      "verdict": "FP",
+      "confidence": "high",
+      "reason": "Loop assigns providerId/keys from plugin manifest entries into a normalized envVars map for provider auth lookup; no shell/process env mutation occurs."
+    },
+    {
+      "idx": 43,
+      "tool": "codeql",
+      "rule_id": "openclaw/resource-link-into-prompt",
+      "verdict": "FP",
+      "confidence": "high",
+      "reason": "attachment.label is rendered into an <img alt> attribute via lit-html template for UI display, not interpolated into an LLM prompt."
+    },
+    {
+      "idx": 44,
+      "tool": "codeql",
+      "rule_id": "openclaw/url-with-secret-into-error",
+      "verdict": "FP",
+      "confidence": "medium",
+      "reason": "URL is a public npm/CDN release verification URL in a build/release script, not user-credentialed; release-beta-verifier is operator tooling under scripts/."
+    },
+    {
+      "idx": 45,
+      "tool": "codeql",
+      "rule_id": "openclaw/auth-function-default-allow",
+      "verdict": "TP",
+      "confidence": "medium",
+      "reason": "isAllowedInteractionSource returns true unconditionally when allowedSourceIps is empty/undefined, defaulting to allow when the allowlist is unconfigured."
+    },
+    {
+      "idx": 46,
+      "tool": "codeql",
+      "rule_id": "openclaw/send-action-no-target-validation",
+      "verdict": "FP",
+      "confidence": "medium",
+      "reason": "jid is an internal parameter to an outbound send helper called from application dispatch flow, not externally-controlled input requiring per-call validation."
+    },
+    {
+      "idx": 47,
+      "tool": "codeql",
+      "rule_id": "openclaw/json-parse-no-size-limit",
+      "verdict": "FP",
+      "confidence": "medium",
+      "reason": "JSON.parse runs on Twilio REST error response text (trusted upstream API), wrapped in try/catch with shape validation; no untrusted DoS vector."
+    },
+    {
+      "idx": 48,
+      "tool": "codeql",
+      "rule_id": "openclaw/fs-write-risky-path",
+      "verdict": "FP",
+      "confidence": "high",
+      "reason": "targetPath is built internally via buildClobberedTargetPath from app config path; writeFile uses exclusive 'wx' flag and 0o600 mode, no user-controlled traversal."
+    },
+    {
+      "idx": 49,
+      "tool": "codeql",
+      "rule_id": "openclaw/untrusted-header-into-log",
+      "verdict": "FP",
+      "confidence": "high",
+      "reason": "'host' here is account.config.webhookHost (operator-controlled config), not an HTTP request header; rule misidentified the source."
+    },
+    {
+      "idx": 50,
+      "tool": "codeql",
+      "rule_id": "openclaw/url-no-host-allowlist",
+      "verdict": "FP",
+      "confidence": "high",
+      "reason": "new URL() inside stripUrlCredentials is pure parsing to strip user:pass from a URL string; no fetch/SSRF surface where an allowlist would apply."
+    }
+  ],
+  "by_tool": {
+    "semgrep": {
+      "TP": 3,
+      "FP": 22,
+      "unclear": 0,
+      "n": 25
+    },
+    "codeql": {
+      "TP": 3,
+      "FP": 22,
+      "unclear": 0,
+      "n": 25
+    }
+  },
+  "per_rule": {
+    "path-join-user-input-no-boundary-check": {
+      "tool": "semgrep",
+      "TP": 0,
+      "FP": 1
+    },
+    "json-parse-no-size-limit": {
+      "tool": "semgrep",
+      "TP": 0,
+      "FP": 1
+    },
+    "user-path-to-file-write-no-boundary": {
+      "tool": "semgrep",
+      "TP": 0,
+      "FP": 1
+    },
+    "weak-token-comparison": {
+      "tool": "semgrep",
+      "TP": 0,
+      "FP": 1
+    },
+    "url-with-secret-into-error-message": {
+      "tool": "semgrep",
+      "TP": 0,
+      "FP": 1
+    },
+    "external-payload-url-fetch": {
+      "tool": "semgrep",
+      "TP": 1,
+      "FP": 0
+    },
+    "fetch-url-without-ssrf-guard": {
+      "tool": "semgrep",
+      "TP": 0,
+      "FP": 1
+    },
+    "workspace-path-into-system-prompt": {
+      "tool": "semgrep",
+      "TP": 0,
+      "FP": 1
+    },
+    "path-resolve-missing-containment": {
+      "tool": "semgrep",
+      "TP": 0,
+      "FP": 1
+    },
+    "url-no-host-allowlist": {
+      "tool": "semgrep",
+      "TP": 0,
+      "FP": 1
+    },
+    "untrusted-header-into-log": {
+      "tool": "semgrep",
+      "TP": 0,
+      "FP": 1
+    },
+    "realpath-without-hardlink-check": {
+      "tool": "semgrep",
+      "TP": 1,
+      "FP": 0
+    },
+    "browser-output-path-no-symlink-guard": {
+      "tool": "semgrep",
+      "TP": 0,
+      "FP": 1
+    },
+    "regex-from-user-input": {
+      "tool": "semgrep",
+      "TP": 0,
+      "FP": 1
+    },
+    "webhook-handler-no-auth-broad": {
+      "tool": "semgrep",
+      "TP": 0,
+      "FP": 1
+    },
+    "env-vars-no-dangerous-name-check": {
+      "tool": "semgrep",
+      "TP": 0,
+      "FP": 1
+    },
+    "sensitive-file-write-no-mode-restriction": {
+      "tool": "semgrep",
+      "TP": 0,
+      "FP": 1
+    },
+    "auth-function-default-allow": {
+      "tool": "semgrep",
+      "TP": 0,
+      "FP": 1
+    },
+    "reaction-handler-missing-auth-check": {
+      "tool": "semgrep",
+      "TP": 0,
+      "FP": 1
+    },
+    "send-action-no-target-validation": {
+      "tool": "semgrep",
+      "TP": 0,
+      "FP": 1
+    },
+    "allowlist-no-deny-on-miss": {
+      "tool": "semgrep",
+      "TP": 0,
+      "FP": 1
+    },
+    "file-write-without-symlink-protection": {
+      "tool": "semgrep",
+      "TP": 0,
+      "FP": 1
+    },
+    "path-boundary-startswith-only": {
+      "tool": "semgrep",
+      "TP": 1,
+      "FP": 0
+    },
+    "chrome-no-sandbox-without-validation": {
+      "tool": "semgrep",
+      "TP": 0,
+      "FP": 1
+    },
+    "resource-link-metadata-into-prompt": {
+      "tool": "semgrep",
+      "TP": 0,
+      "FP": 1
+    },
+    "openclaw/allowlist-no-deny-on-miss": {
+      "tool": "codeql",
+      "TP": 0,
+      "FP": 1
+    },
+    "openclaw/scp-ssh-unvalidated-host": {
+      "tool": "codeql",
+      "TP": 0,
+      "FP": 1
+    },
+    "openclaw/path-resolve-no-containment": {
+      "tool": "codeql",
+      "TP": 0,
+      "FP": 1
+    },
+    "openclaw/execsync-template-literal": {
+      "tool": "codeql",
+      "TP": 0,
+      "FP": 1
+    },
+    "openclaw/webhook-handler-no-auth": {
+      "tool": "codeql",
+      "TP": 0,
+      "FP": 1
+    },
+    "openclaw/path-join-no-containment": {
+      "tool": "codeql",
+      "TP": 0,
+      "FP": 1
+    },
+    "openclaw/sensitive-file-write-no-mode": {
+      "tool": "codeql",
+      "TP": 0,
+      "FP": 1
+    },
+    "openclaw/regex-from-user-input": {
+      "tool": "codeql",
+      "TP": 0,
+      "FP": 1
+    },
+    "openclaw/realpath-no-symlink-guard": {
+      "tool": "codeql",
+      "TP": 0,
+      "FP": 1
+    },
+    "openclaw/weak-token-comparison": {
+      "tool": "codeql",
+      "TP": 0,
+      "FP": 1
+    },
+    "openclaw/file-write-no-symlink-protection": {
+      "tool": "codeql",
+      "TP": 0,
+      "FP": 1
+    },
+    "openclaw/fetch-no-ssrf-guard": {
+      "tool": "codeql",
+      "TP": 0,
+      "FP": 1
+    },
+    "openclaw/url-no-host-allowlist": {
+      "tool": "codeql",
+      "TP": 0,
+      "FP": 2
+    },
+    "openclaw/reaction-handler-no-auth": {
+      "tool": "codeql",
+      "TP": 0,
+      "FP": 1
+    },
+    "openclaw/error-stack-in-response": {
+      "tool": "codeql",
+      "TP": 1,
+      "FP": 0
+    },
+    "openclaw/sandbox-mode-default-off": {
+      "tool": "codeql",
+      "TP": 1,
+      "FP": 0
+    },
+    "openclaw/env-vars-no-dangerous-check": {
+      "tool": "codeql",
+      "TP": 0,
+      "FP": 1
+    },
+    "openclaw/resource-link-into-prompt": {
+      "tool": "codeql",
+      "TP": 0,
+      "FP": 1
+    },
+    "openclaw/url-with-secret-into-error": {
+      "tool": "codeql",
+      "TP": 0,
+      "FP": 1
+    },
+    "openclaw/auth-function-default-allow": {
+      "tool": "codeql",
+      "TP": 1,
+      "FP": 0
+    },
+    "openclaw/send-action-no-target-validation": {
+      "tool": "codeql",
+      "TP": 0,
+      "FP": 1
+    },
+    "openclaw/json-parse-no-size-limit": {
+      "tool": "codeql",
+      "TP": 0,
+      "FP": 1
+    },
+    "openclaw/fs-write-risky-path": {
+      "tool": "codeql",
+      "TP": 0,
+      "FP": 1
+    },
+    "openclaw/untrusted-header-into-log": {
+      "tool": "codeql",
+      "TP": 0,
+      "FP": 1
+    }
+  }
+}

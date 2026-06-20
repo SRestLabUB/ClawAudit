@@ -1,0 +1,502 @@
+[
+  {
+    "idx": 1,
+    "tool": "semgrep",
+    "rule_id": "path-join-user-input-no-boundary-check",
+    "file": "/data1/zhengson/cse713/openclaw_latest/extensions/memory-core/src/cli.runtime.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/extensions/memory-core/src/cli.runtime.ts",
+    "line_start": 202,
+    "line_end": 202,
+    "message": "path.join() uses a variable that may contain user-controlled input without verifying the result stays within the intended directory. An attacker could use '../' sequences or absolute paths to write outside the target directory. Validate with path.relative() or use a boundary-checked helper like reso"
+  },
+  {
+    "idx": 2,
+    "tool": "semgrep",
+    "rule_id": "json-parse-no-size-limit",
+    "file": "/data1/zhengson/cse713/openclaw_latest/scripts/control-ui-i18n.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/scripts/control-ui-i18n.ts",
+    "line_start": 888,
+    "line_end": 888,
+    "message": "JSON.parse() is called on a variable. If the source is a request body / stream / external content, oversized or deeply nested JSON enables DoS. Guard with maxBytes / contentLength / readResponseWithLimit first.\n"
+  },
+  {
+    "idx": 3,
+    "tool": "semgrep",
+    "rule_id": "user-path-to-file-write-no-boundary",
+    "file": "/data1/zhengson/cse713/openclaw_latest/src/daemon/launchd.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/src/daemon/launchd.ts",
+    "line_start": 909,
+    "line_end": 909,
+    "message": "A user-controlled path is passed to a file write/download operation without path boundary validation. Use resolvePathWithinRoot() or validate that the resolved path stays within the intended directory.\n"
+  },
+  {
+    "idx": 4,
+    "tool": "semgrep",
+    "rule_id": "weak-token-comparison",
+    "file": "/data1/zhengson/cse713/openclaw_latest/extensions/telegram/src/exec-approvals.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/extensions/telegram/src/exec-approvals.ts",
+    "line_start": 51,
+    "line_end": 51,
+    "message": "Equality comparison (=== / !==) on a token / secret / hmac / signature identifier enables timing attacks that leak the value one byte at a time. Use crypto.timingSafeEqual(). CWE-208.\n"
+  },
+  {
+    "idx": 5,
+    "tool": "semgrep",
+    "rule_id": "url-with-secret-into-error-message",
+    "file": "/data1/zhengson/cse713/openclaw_latest/src/cli/nodes-camera.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/src/cli/nodes-camera.ts",
+    "line_start": 150,
+    "line_end": 150,
+    "message": "A URL is interpolated into an Error message or log without redaction. URLs commonly carry secrets in the path or query (e.g. https://api.telegram.org/bot<TOKEN>/..., basic-auth in userinfo, ?api_key=...). The secret will end up in stack traces, crash reports, and CI output. Pass the URL through reda"
+  },
+  {
+    "idx": 6,
+    "tool": "semgrep",
+    "rule_id": "external-payload-url-fetch",
+    "file": "/data1/zhengson/cse713/openclaw_latest/src/cli/capability-cli.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/src/cli/capability-cli.ts",
+    "line_start": 1275,
+    "line_end": 1275,
+    "message": "A URL from an external payload (e.g., webhook, node message, API response) is passed directly to a fetch/download function without binding to the expected source host. Validate that the URL hostname matches the expected source before fetching.\n"
+  },
+  {
+    "idx": 7,
+    "tool": "semgrep",
+    "rule_id": "fetch-url-without-ssrf-guard",
+    "file": "/data1/zhengson/cse713/openclaw_latest/scripts/lib/release-beta-verifier.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/scripts/lib/release-beta-verifier.ts",
+    "line_start": 216,
+    "line_end": 219,
+    "message": "fetch() is called with a URL variable without SSRF protection. Use fetchWithSsrFGuard() or equivalent to prevent requests to internal/private network addresses (RFC1918, link-local, localhost, cloud metadata endpoints).\n"
+  },
+  {
+    "idx": 8,
+    "tool": "semgrep",
+    "rule_id": "workspace-path-into-system-prompt",
+    "file": "/data1/zhengson/cse713/openclaw_latest/src/agents/system-prompt.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/src/agents/system-prompt.ts",
+    "line_start": 1330,
+    "line_end": 1330,
+    "message": "A workspace / cwd / directory path is interpolated into a system prompt or prompt template without sanitization. A directory name can contain newlines, Unicode bidi marks, or zero-width characters that break prompt structure and inject attacker-controlled instructions. Wrap with sanitizePromptText()"
+  },
+  {
+    "idx": 9,
+    "tool": "semgrep",
+    "rule_id": "path-resolve-missing-containment",
+    "file": "/data1/zhengson/cse713/openclaw_latest/src/plugin-sdk/windows-spawn.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/src/plugin-sdk/windows-spawn.ts",
+    "line_start": 193,
+    "line_end": 193,
+    "message": "path.resolve() is used with user-controlled input but the result is not validated to stay within the base directory. Check with path.relative() that the result does not start with '..' and also validate against symlink escapes.\n"
+  },
+  {
+    "idx": 10,
+    "tool": "semgrep",
+    "rule_id": "url-no-host-allowlist",
+    "file": "/data1/zhengson/cse713/openclaw_latest/extensions/browser/src/browser/client-fetch.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/extensions/browser/src/browser/client-fetch.ts",
+    "line_start": 297,
+    "line_end": 297,
+    "message": "new URL(x) is constructed from a variable. Without an isAllowedHost / isPrivateIp / hostAllowlist check on the resulting host, this enables SSRF.\n"
+  },
+  {
+    "idx": 11,
+    "tool": "semgrep",
+    "rule_id": "untrusted-header-into-log",
+    "file": "/data1/zhengson/cse713/openclaw_latest/src/gateway/server/ws-connection/message-handler.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/src/gateway/server/ws-connection/message-handler.ts",
+    "line_start": 597,
+    "line_end": 599,
+    "message": "A request header (Origin, User-Agent, Referer, X-Forwarded-For, etc.) is concatenated into a log message without neutralization or length limit. If logs are later ingested by an LLM (AI-assisted debugging, agent context), an unauthenticated client can poison the log to inject prompt content. Pass he"
+  },
+  {
+    "idx": 12,
+    "tool": "semgrep",
+    "rule_id": "realpath-without-hardlink-check",
+    "file": "/data1/zhengson/cse713/openclaw_latest/src/node-host/invoke-system-run-plan.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/src/node-host/invoke-system-run-plan.ts",
+    "line_start": 1099,
+    "line_end": 1099,
+    "message": "fs.realpath() resolves symlinks but does not detect hardlinks. A hardlinked file has the same inode but a different path, so realpath-based boundary checks can be bypassed. After realpath, also verify stat.nlink === 1 to reject hardlink aliases.\n"
+  },
+  {
+    "idx": 13,
+    "tool": "semgrep",
+    "rule_id": "browser-output-path-no-symlink-guard",
+    "file": "/data1/zhengson/cse713/openclaw_latest/extensions/browser/src/browser/routes/agent.debug.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/extensions/browser/src/browser/routes/agent.debug.ts",
+    "line_start": 213,
+    "line_end": 217,
+    "message": "Browser output path (trace, download, screenshot) is used without symlink escape validation. Use resolvePathWithinRoot() or openWritableFileWithinRoot() to prevent symlink-based escapes.\n"
+  },
+  {
+    "idx": 14,
+    "tool": "semgrep",
+    "rule_id": "regex-from-user-input",
+    "file": "/data1/zhengson/cse713/openclaw_latest/extensions/zalouser/src/text-styles.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/extensions/zalouser/src/text-styles.ts",
+    "line_start": 473,
+    "line_end": 473,
+    "message": "new RegExp(x) where x is not a string literal. If x is user-controlled, both ReDoS (catastrophic backtracking) and regex injection are possible.\n"
+  },
+  {
+    "idx": 15,
+    "tool": "semgrep",
+    "rule_id": "webhook-handler-no-auth-broad",
+    "file": "/data1/zhengson/cse713/openclaw_latest/extensions/zalouser/src/monitor.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/extensions/zalouser/src/monitor.ts",
+    "line_start": 1027,
+    "line_end": 1055,
+    "message": "Function whose name suggests it handles a webhook / message / event / reaction, but whose body contains no auth-related call (isAuthenticated, requireAuth, allowFrom, hasPermission, authorize). Cat-5.\n"
+  },
+  {
+    "idx": 16,
+    "tool": "semgrep",
+    "rule_id": "env-vars-no-dangerous-name-check",
+    "file": "/data1/zhengson/cse713/openclaw_latest/src/plugins/contracts/registry.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/src/plugins/contracts/registry.ts",
+    "line_start": 103,
+    "line_end": 105,
+    "message": "Environment variables from config are applied to process.env without checking for dangerous variable names. Variables like BASH_ENV, ENV, PYTHONSTARTUP, LD_PRELOAD, DYLD_INSERT_LIBRARIES can execute arbitrary code when a subprocess starts. Filter with isDangerousHostEnvVarName() or equivalent.\n"
+  },
+  {
+    "idx": 17,
+    "tool": "semgrep",
+    "rule_id": "sensitive-file-write-no-mode-restriction",
+    "file": "/data1/zhengson/cse713/openclaw_latest/src/agents/embedded-agent-runner/session-manager-init.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/src/agents/embedded-agent-runner/session-manager-init.ts",
+    "line_start": 90,
+    "line_end": 90,
+    "message": "A sensitive file (transcript, session, credentials, token store, memory) is written via fs.writeFile* without an explicit mode option. The file inherits the process umask and may be readable by other users. Pass { mode: 0o600 } (file) or 0o700 (dir), or chmod immediately after creation.\n"
+  },
+  {
+    "idx": 18,
+    "tool": "semgrep",
+    "rule_id": "auth-function-default-allow",
+    "file": "/data1/zhengson/cse713/openclaw_latest/src/channels/message-access/sender-gates.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/src/channels/message-access/sender-gates.ts",
+    "line_start": 168,
+    "line_end": 187,
+    "message": "Authorization/access-control function defaults to returning allowed:true. Authorization checks should fail-closed \u2014 the default should be allowed:false. Only explicitly grant access when conditions are met.\n"
+  },
+  {
+    "idx": 19,
+    "tool": "semgrep",
+    "rule_id": "reaction-handler-missing-auth-check",
+    "file": "/data1/zhengson/cse713/openclaw_latest/extensions/discord/src/monitor/listeners.reactions.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/extensions/discord/src/monitor/listeners.reactions.ts",
+    "line_start": 64,
+    "line_end": 71,
+    "message": "A reaction/event handler dispatches to the agent pipeline without the same authorization checks (dmPolicy, allowFrom, groupPolicy) that the corresponding message handler applies. Ensure all ingress paths apply consistent authorization.\n"
+  },
+  {
+    "idx": 20,
+    "tool": "semgrep",
+    "rule_id": "send-action-no-target-validation",
+    "file": "/data1/zhengson/cse713/openclaw_latest/extensions/matrix/src/matrix/send.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/extensions/matrix/src/matrix/send.ts",
+    "line_start": 265,
+    "line_end": 265,
+    "message": "send*Message / send*Action / dispatch* called with a non-literal target argument and no validateTarget / isAllowedTarget guard nearby. Allows messages to be routed to attacker-chosen destinations. Cat-5.\n"
+  },
+  {
+    "idx": 21,
+    "tool": "semgrep",
+    "rule_id": "allowlist-no-deny-on-miss",
+    "file": "/data1/zhengson/cse713/openclaw_latest/extensions/matrix/src/matrix/monitor/allowlist.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/extensions/matrix/src/matrix/monitor/allowlist.ts",
+    "line_start": 83,
+    "line_end": 85,
+    "message": "An allowFrom/allowlist check returns allowed:true when the sender is in the list, but does not explicitly return allowed:false when the sender is NOT in the list. This allows unauthorized users to fall through to a default-allow path. Always return allowed:false after an allowlist miss.\n"
+  },
+  {
+    "idx": 22,
+    "tool": "semgrep",
+    "rule_id": "file-write-without-symlink-protection",
+    "file": "/data1/zhengson/cse713/openclaw_latest/scripts/check-gateway-watch-regression.mjs",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/scripts/check-gateway-watch-regression.mjs",
+    "line_start": 836,
+    "line_end": 839,
+    "message": "File write operation without TOCTOU-safe symlink protection. Between path validation and the actual write, an attacker could replace the target with a symlink pointing outside the boundary. Use atomic write patterns (write to temp, then rename) or fd-verified boundary checks.\n"
+  },
+  {
+    "idx": 23,
+    "tool": "semgrep",
+    "rule_id": "path-boundary-startswith-only",
+    "file": "/data1/zhengson/cse713/openclaw_latest/src/plugins/public-surface-loader.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/src/plugins/public-surface-loader.ts",
+    "line_start": 77,
+    "line_end": 77,
+    "message": "Path boundary check uses only string comparison (startsWith) without resolving symlinks first. Symlinks can bypass string-based path containment checks. Use fs.realpath() before comparison and also check for hardlinks (stat.nlink > 1).\n"
+  },
+  {
+    "idx": 24,
+    "tool": "semgrep",
+    "rule_id": "chrome-no-sandbox-without-validation",
+    "file": "/data1/zhengson/cse713/openclaw_latest/scripts/dev/realtime-talk-live-smoke.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/scripts/dev/realtime-talk-live-smoke.ts",
+    "line_start": 707,
+    "line_end": 715,
+    "message": "Chrome / Chromium is launched with --no-sandbox (or sandbox: false). This disables the OS-level browser sandbox. Only allowed if the runtime has explicitly validated it is already inside an isolated container \u2014 guard with sandboxValidated / isContainerized before adding this flag.\n"
+  },
+  {
+    "idx": 25,
+    "tool": "semgrep",
+    "rule_id": "resource-link-metadata-into-prompt",
+    "file": "/data1/zhengson/cse713/openclaw_latest/src/acp/event-mapper.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/src/acp/event-mapper.ts",
+    "line_start": 263,
+    "line_end": 263,
+    "message": "Resource-link / attachment metadata (title, uri, name, description) is interpolated directly into prompt text. These fields are attacker-influenced \u2014 use escapePromptDelimiters() or render them inside an explicit fenced block to avoid prompt injection.\n"
+  },
+  {
+    "idx": 26,
+    "tool": "codeql",
+    "rule_id": "openclaw/allowlist-no-deny-on-miss",
+    "file": "extensions/codex/src/app-server/config.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/extensions/codex/src/app-server/config.ts",
+    "line_start": 1107,
+    "line_end": 1109,
+    "message": "Allowlist check on 'allowedSandboxModes' lacks explicit else {{ deny }} branch."
+  },
+  {
+    "idx": 27,
+    "tool": "codeql",
+    "rule_id": "openclaw/scp-ssh-unvalidated-host",
+    "file": "src/auto-reply/reply/stage-sandbox-media.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/src/auto-reply/reply/stage-sandbox-media.ts",
+    "line_start": 323,
+    "line_end": 335,
+    "message": "spawn(scp/ssh, ...) with unvalidated host identifier 'safeRemoteHost'.\nspawn(scp/ssh, ...) with unvalidated host identifier 'safeRemotePath'."
+  },
+  {
+    "idx": 28,
+    "tool": "codeql",
+    "rule_id": "openclaw/path-resolve-no-containment",
+    "file": "src/agents/agent-tools.read.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/src/agents/agent-tools.read.ts",
+    "line_start": 1014,
+    "line_end": 1014,
+    "message": "path.resolve() with risky argument 'relative' has no containment check."
+  },
+  {
+    "idx": 29,
+    "tool": "codeql",
+    "rule_id": "openclaw/execsync-template-literal",
+    "file": "extensions/memory-core/src/memory/manager-sync-ops.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/extensions/memory-core/src/memory/manager-sync-ops.ts",
+    "line_start": 2212,
+    "line_end": 2212,
+    "message": "exec() called with template-literal command string (shell injection risk)."
+  },
+  {
+    "idx": 30,
+    "tool": "codeql",
+    "rule_id": "openclaw/webhook-handler-no-auth",
+    "file": "ui/src/ui/chat/realtime-talk-google-live.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/ui/src/ui/chat/realtime-talk-google-live.ts",
+    "line_start": 185,
+    "line_end": 278,
+    "message": "Handler 'handleMessage' has no auth-related call in its body."
+  },
+  {
+    "idx": 31,
+    "tool": "codeql",
+    "rule_id": "openclaw/path-join-no-containment",
+    "file": "src/infra/update-global.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/src/infra/update-global.ts",
+    "line_start": 744,
+    "line_end": 744,
+    "message": "path.join() with risky argument 'targetGlobalRoot' has no containment check."
+  },
+  {
+    "idx": 32,
+    "tool": "codeql",
+    "rule_id": "openclaw/sensitive-file-write-no-mode",
+    "file": "extensions/qa-lab/src/cli.runtime.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/extensions/qa-lab/src/cli.runtime.ts",
+    "line_start": 764,
+    "line_end": 764,
+    "message": "fs.writeFile() to sensitive path 'tokenSummaryPath' has no {{ mode: 0o600 }} option."
+  },
+  {
+    "idx": 33,
+    "tool": "codeql",
+    "rule_id": "openclaw/regex-from-user-input",
+    "file": "src/infra/outbound/sanitize-text.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/src/infra/outbound/sanitize-text.ts",
+    "line_start": 15,
+    "line_end": 18,
+    "message": "new RegExp() constructed from non-literal source \u2014 ReDoS / regex-injection risk."
+  },
+  {
+    "idx": 34,
+    "tool": "codeql",
+    "rule_id": "openclaw/realpath-no-symlink-guard",
+    "file": "src/media/media-reference.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/src/media/media-reference.ts",
+    "line_start": 110,
+    "line_end": 110,
+    "message": "realpath() used without an accompanying lstat()/isSymbolicLink() check."
+  },
+  {
+    "idx": 35,
+    "tool": "codeql",
+    "rule_id": "openclaw/weak-token-comparison",
+    "file": "src/node-host/invoke-system-run-plan.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/src/node-host/invoke-system-run-plan.ts",
+    "line_start": 469,
+    "line_end": 469,
+    "message": "Equality comparison on secret-like identifier 'token' (timing attack risk)."
+  },
+  {
+    "idx": 36,
+    "tool": "codeql",
+    "rule_id": "openclaw/file-write-no-symlink-protection",
+    "file": "scripts/generate-plugin-inventory-doc.mjs",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/scripts/generate-plugin-inventory-doc.mjs",
+    "line_start": 538,
+    "line_end": 542,
+    "message": "fs.writeFileSync() with no lstat/isSymbolicLink check or 'wx' flag (symlink redirect risk)."
+  },
+  {
+    "idx": 37,
+    "tool": "codeql",
+    "rule_id": "openclaw/fetch-no-ssrf-guard",
+    "file": "src/agents/tools/pdf-native-providers.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/src/agents/tools/pdf-native-providers.ts",
+    "line_start": 119,
+    "line_end": 133,
+    "message": "fetch() called with variable URL 'resolve ... aseUrl)' with no SSRF guard."
+  },
+  {
+    "idx": 38,
+    "tool": "codeql",
+    "rule_id": "openclaw/url-no-host-allowlist",
+    "file": "extensions/feishu/src/app-registration.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/extensions/feishu/src/app-registration.ts",
+    "line_start": 107,
+    "line_end": 107,
+    "message": "new URL() built from variable 'params.url' has no host allowlist."
+  },
+  {
+    "idx": 39,
+    "tool": "codeql",
+    "rule_id": "openclaw/reaction-handler-no-auth",
+    "file": "extensions/msteams/src/monitor-handler.test-helpers.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/extensions/msteams/src/monitor-handler.test-helpers.ts",
+    "line_start": 147,
+    "line_end": 147,
+    "message": "Reaction / DM handler 'onReactionsRemoved' has no allowFrom/dmPolicy check."
+  },
+  {
+    "idx": 40,
+    "tool": "codeql",
+    "rule_id": "openclaw/error-stack-in-response",
+    "file": "src/proxy-capture/proxy-server.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/src/proxy-capture/proxy-server.ts",
+    "line_start": 224,
+    "line_end": 224,
+    "message": "Response/reply includes 'error.message' (exposes internal info)."
+  },
+  {
+    "idx": 41,
+    "tool": "codeql",
+    "rule_id": "openclaw/sandbox-mode-default-off",
+    "file": "extensions/codex/src/migration/apply.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/extensions/codex/src/migration/apply.ts",
+    "line_start": 218,
+    "line_end": 218,
+    "message": "Sandbox-related config 'isolated' defaults to 'false'."
+  },
+  {
+    "idx": 42,
+    "tool": "codeql",
+    "rule_id": "openclaw/env-vars-no-dangerous-check",
+    "file": "src/plugins/contracts/registry.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/src/plugins/contracts/registry.ts",
+    "line_start": 104,
+    "line_end": 104,
+    "message": "Env-var assignment to 'envVars\\[...\\]' inside a loop has no dangerous-name filter."
+  },
+  {
+    "idx": 43,
+    "tool": "codeql",
+    "rule_id": "openclaw/resource-link-into-prompt",
+    "file": "ui/src/ui/chat/grouped-render.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/ui/src/ui/chat/grouped-render.ts",
+    "line_start": 1412,
+    "line_end": 1419,
+    "message": "Prompt template interpolates resource-link metadata 'attachment.label'."
+  },
+  {
+    "idx": 44,
+    "tool": "codeql",
+    "rule_id": "openclaw/url-with-secret-into-error",
+    "file": "scripts/lib/release-beta-verifier.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/scripts/lib/release-beta-verifier.ts",
+    "line_start": 240,
+    "line_end": 240,
+    "message": "new Error() interpolates URL 'url' (may leak embedded token)."
+  },
+  {
+    "idx": 45,
+    "tool": "codeql",
+    "rule_id": "openclaw/auth-function-default-allow",
+    "file": "extensions/mattermost/src/mattermost/interactions.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/extensions/mattermost/src/mattermost/interactions.ts",
+    "line_start": 103,
+    "line_end": 122,
+    "message": "Auth-like function 'isAllowedInteractionSource' has a default-true return."
+  },
+  {
+    "idx": 46,
+    "tool": "codeql",
+    "rule_id": "openclaw/send-action-no-target-validation",
+    "file": "extensions/whatsapp/src/inbound/monitor.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/extensions/whatsapp/src/inbound/monitor.ts",
+    "line_start": 437,
+    "line_end": 437,
+    "message": "sendMessage() with unvalidated target 'jid'."
+  },
+  {
+    "idx": 47,
+    "tool": "codeql",
+    "rule_id": "openclaw/json-parse-no-size-limit",
+    "file": "extensions/voice-call/src/providers/twilio/api.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/extensions/voice-call/src/providers/twilio/api.ts",
+    "line_start": 17,
+    "line_end": 17,
+    "message": "JSON.parse() on variable 'text' has no size guard (DoS risk)."
+  },
+  {
+    "idx": 48,
+    "tool": "codeql",
+    "rule_id": "openclaw/fs-write-risky-path",
+    "file": "src/config/io.clobber-snapshot.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/src/config/io.clobber-snapshot.ts",
+    "line_start": 289,
+    "line_end": 293,
+    "message": "fs.writeFile() called with risky path 'targetPath'."
+  },
+  {
+    "idx": 49,
+    "tool": "codeql",
+    "rule_id": "openclaw/untrusted-header-into-log",
+    "file": "extensions/feishu/src/monitor.transport.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/extensions/feishu/src/monitor.transport.ts",
+    "line_start": 317,
+    "line_end": 317,
+    "message": "Log call interpolates untrusted header identifier 'host' with no neutralizer."
+  },
+  {
+    "idx": 50,
+    "tool": "codeql",
+    "rule_id": "openclaw/url-no-host-allowlist",
+    "file": "extensions/browser/src/browser/cdp.helpers.ts",
+    "file_abs": "/data1/zhengson/cse713/openclaw_latest/extensions/browser/src/browser/cdp.helpers.ts",
+    "line_start": 155,
+    "line_end": 155,
+    "message": "new URL() built from variable 'url' has no host allowlist."
+  }
+]

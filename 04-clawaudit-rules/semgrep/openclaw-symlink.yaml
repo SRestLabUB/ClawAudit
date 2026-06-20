@@ -1,0 +1,149 @@
+rules:
+  # ──────────────────────────────────────────────
+  # CWE-59: Symlink / Hardlink Attacks
+  # ──────────────────────────────────────────────
+
+  # SL-1: fs.realpath without hardlink check (nlink > 1)
+  # Catches: GHSA-3jx4-q2m7-r496 (hardlink alias bypass)
+  #          GHSA-h3x4-hc5v-v2gm (media path symlink)
+  - id: realpath-without-hardlink-check
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      fs.realpath() resolves symlinks but does not detect hardlinks.
+      A hardlinked file has the same inode but a different path, so
+      realpath-based boundary checks can be bypassed. After realpath,
+      also verify stat.nlink === 1 to reject hardlink aliases.
+    metadata:
+      cwe:
+        - "CWE-59: Improper Link Resolution Before File Access ('Link Following')"
+      confidence: MEDIUM
+      impact: HIGH
+      category: security
+    patterns:
+      - pattern-either:
+          - pattern: await fs.realpath($PATH)
+          - pattern: fs.realpathSync($PATH)
+      - pattern-not-inside: |
+          ...
+          $STAT = await fs.stat(...)
+          ...
+          if ($STAT.nlink > 1) { ... }
+      - pattern-not-inside: |
+          ...
+          assertNoHardlinkedFinalPath(...)
+      - pattern-not-inside: |
+          ...
+          assertNoPathAliasEscape(...)
+
+  # SL-2: File write without symlink/TOCTOU protection
+  # Catches: GHSA-3pxq-f3cp-jmxp (browser output symlink race)
+  #          GHSA-36h3-7c54-j27r (browser trace symlink escape)
+  - id: file-write-without-symlink-protection
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      File write operation without TOCTOU-safe symlink protection.
+      Between path validation and the actual write, an attacker could
+      replace the target with a symlink pointing outside the boundary.
+      Use atomic write patterns (write to temp, then rename) or
+      fd-verified boundary checks.
+    metadata:
+      cwe:
+        - "CWE-59: Improper Link Resolution Before File Access ('Link Following')"
+        - "CWE-367: Time-of-check Time-of-use (TOCTOU) Race Condition"
+      confidence: LOW
+      impact: HIGH
+      category: security
+    patterns:
+      - pattern-either:
+          - pattern: fs.writeFileSync($PATH, $DATA, ...)
+          - pattern: await fs.writeFile($PATH, $DATA, ...)
+      - pattern-not-inside: |
+          openWritableFileWithinRoot(...)
+      - pattern-not-inside: |
+          assertNoPathAliasEscape(...)
+          ...
+          fs.writeFileSync($PATH, $DATA, ...)
+      - pattern-not-inside: |
+          await assertNoPathAliasEscape(...)
+          ...
+          await fs.writeFile($PATH, $DATA, ...)
+      # Only flag in security-sensitive paths
+      - metavariable-regex:
+          metavariable: $PATH
+          regex: ".*(tmp|temp|download|trace|output|sandbox|media).*"
+
+  # SL-3: assertSandboxPath without hardlink parameter
+  # Catches: GHSA-3jx4-q2m7-r496 (hardlink workspace escape)
+  - id: sandbox-path-check-missing-hardlink
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      assertSandboxPath() is called without checking for hardlink
+      aliases. Hardlinks can reference files outside the workspace
+      boundary while appearing to be inside it. Pass
+      allowFinalHardlink: false or call assertNoHardlinkedFinalPath()
+      separately.
+    metadata:
+      cwe:
+        - "CWE-59: Improper Link Resolution Before File Access ('Link Following')"
+      confidence: HIGH
+      impact: HIGH
+      category: security
+    patterns:
+      - pattern: |
+          assertSandboxPath({
+            filePath: $PATH,
+            ...
+          })
+      - pattern-not: |
+          assertSandboxPath({
+            filePath: $PATH,
+            ...,
+            allowFinalHardlink: ...,
+            ...
+          })
+
+  # SL-4: Symlink-sensitive path operations in browser/download contexts
+  # Catches: GHSA-36h3-7c54-j27r (browser trace/download symlink)
+  - id: browser-output-path-no-symlink-guard
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      Browser output path (trace, download, screenshot) is used without
+      symlink escape validation. Use resolvePathWithinRoot() or
+      openWritableFileWithinRoot() to prevent symlink-based escapes.
+    metadata:
+      cwe:
+        - "CWE-59: Improper Link Resolution Before File Access ('Link Following')"
+      confidence: MEDIUM
+      impact: HIGH
+      category: security
+    pattern-either:
+      - patterns:
+          - pattern: |
+              await $PW.traceStopViaPlaywright({
+                path: $PATH,
+                ...
+              })
+          - pattern-not-inside: |
+              $PATH = resolvePathWithinRoot(...)
+          - pattern-not-inside: |
+              $PATH = await resolveExistingRelativePath(...)
+      - patterns:
+          - pattern: |
+              await $PW.downloadViaPlaywright({
+                path: $PATH,
+                ...
+              })
+          - pattern-not-inside: |
+              $PATH = resolvePathWithinRoot(...)
+      - patterns:
+          - pattern: |
+              await $PW.waitForDownloadViaPlaywright({
+                path: $PATH,
+                ...
+              })
+          - pattern-not-inside: |
+              $PATH = resolvePathWithinRoot(...)

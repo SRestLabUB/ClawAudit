@@ -1,0 +1,129 @@
+rules:
+  # ──────────────────────────────────────────────
+  # Cat-3: Permission & Isolation
+  # Symptoms: missing sandboxing, overly broad resource access,
+  #           absent inter-skill isolation
+  # Patterns derived from real OpenClaw GHSAs.
+  # ──────────────────────────────────────────────
+
+  # ISO-1: Session/transcript/credential file written via fs.writeFile
+  # without an explicit restrictive mode option, so the file inherits
+  # the process umask and is potentially world-readable.
+  # Catches: GHSA-vr7j-g7jv-h5mp (transcript files created without
+  #          forced user-only permissions).
+  - id: sensitive-file-write-no-mode-restriction
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      A sensitive file (transcript, session, credentials, token store,
+      memory) is written via fs.writeFile* without an explicit mode
+      option. The file inherits the process umask and may be readable
+      by other users. Pass { mode: 0o600 } (file) or 0o700 (dir), or
+      chmod immediately after creation.
+    metadata:
+      cwe:
+        - "CWE-276: Incorrect Default Permissions"
+        - "CWE-732: Incorrect Permission Assignment for Critical Resource"
+      category: security
+      confidence: MEDIUM
+      impact: MEDIUM
+      cat: "Cat-3: Permission & Isolation"
+      example_advisory: "GHSA-vr7j-g7jv-h5mp"
+    pattern-either:
+      - patterns:
+          - pattern-either:
+              - pattern: fs.writeFile($PATH, $DATA, $ENCODING)
+              - pattern: fs.writeFileSync($PATH, $DATA, $ENCODING)
+              - pattern: fs.promises.writeFile($PATH, $DATA, $ENCODING)
+              - pattern: fsPromises.writeFile($PATH, $DATA, $ENCODING)
+          - metavariable-regex:
+              metavariable: $PATH
+              regex: '.*(transcript|session|sessionFile|credential|creds|token|secret|memory).*'
+          - metavariable-regex:
+              metavariable: $ENCODING
+              regex: '^("utf-?8"|"utf16le"|"ascii"|"latin1"|"binary"|"base64"|"hex")$'
+      - patterns:
+          - pattern-either:
+              - pattern: fs.writeFile($PATH, $DATA)
+              - pattern: fs.writeFileSync($PATH, $DATA)
+              - pattern: fs.promises.writeFile($PATH, $DATA)
+          - metavariable-regex:
+              metavariable: $PATH
+              regex: '.*(transcript|session|sessionFile|credential|creds|token|secret|memory).*'
+
+  # ISO-2: Browser/Chromium launched with --no-sandbox without an
+  # explicit sandboxValidated / containerized check first.
+  # Catches: GHSA-43x4-g22p-3hrq (Chrome --no-sandbox disabled OS
+  #          sandbox in OpenClaw browser container).
+  - id: chrome-no-sandbox-without-validation
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      Chrome / Chromium is launched with --no-sandbox (or
+      sandbox: false). This disables the OS-level browser sandbox.
+      Only allowed if the runtime has explicitly validated it is
+      already inside an isolated container — guard with
+      sandboxValidated / isContainerized before adding this flag.
+    metadata:
+      cwe:
+        - "CWE-693: Protection Mechanism Failure"
+      category: security
+      confidence: MEDIUM
+      impact: HIGH
+      cat: "Cat-3: Permission & Isolation"
+      example_advisory: "GHSA-43x4-g22p-3hrq"
+    pattern-either:
+      - patterns:
+          - pattern-either:
+              - pattern: |
+                  $LAUNCH({ ..., args: [..., "--no-sandbox", ...], ... })
+              - pattern: |
+                  $LAUNCH({ ..., args: [..., "--disable-setuid-sandbox", ...], ... })
+              - pattern: |
+                  puppeteer.launch({ ..., args: [..., "--no-sandbox", ...], ... })
+              - pattern: |
+                  chromium.launch({ ..., args: [..., "--no-sandbox", ...], ... })
+          - pattern-not-inside: |
+              if (sandboxValidated) { ... }
+          - pattern-not-inside: |
+              if ($X.sandboxValidated) { ... }
+          - pattern-not-inside: |
+              if (isContainerized()) { ... }
+      - patterns:
+          - pattern: |
+              $LAUNCH({ ..., sandbox: false, ... })
+          - pattern-not-inside: |
+              if (sandboxValidated) { ... }
+
+  # ISO-3: Sandbox config defaults to "off" for an exec/spawn surface
+  # that should be sandboxed.
+  # Catches: GHSA-43x4-g22p-3hrq (sandbox.mode default off when exec
+  #          host is "sandbox").
+  - id: sandbox-mode-default-off
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      A sandbox-related config defaults to "off" / false / disabled
+      while an exec/spawn surface relies on the sandbox. Either flip
+      the default to "on", or fail-closed when the surface needs the
+      sandbox but it is disabled.
+    metadata:
+      cwe:
+        - "CWE-693: Protection Mechanism Failure"
+        - "CWE-1188: Insecure Default Initialization of Resource"
+      category: security
+      confidence: LOW
+      impact: HIGH
+      cat: "Cat-3: Permission & Isolation"
+      example_advisory: "GHSA-43x4-g22p-3hrq"
+    pattern-either:
+      - pattern: |
+          sandbox: { ..., mode: "off", ... }
+      - pattern: |
+          sandboxMode: "off"
+      - pattern: |
+          sandbox: false
+      - pattern: |
+          sandboxEnabled: false
+      - pattern: |
+          const $X = { ..., sandbox: false, ... }

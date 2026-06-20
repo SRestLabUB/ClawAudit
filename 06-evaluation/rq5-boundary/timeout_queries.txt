@@ -1,0 +1,26 @@
+# 21 CodeQL javascript-security-extended queries that did not converge
+# under a 4-hour per-query wall-clock budget on the OpenClaw HEAD
+# repository (commit 4752e9a6, 16,433 JS/TS files).
+# Source: live HEAD scan, see README.md.
+
+js/command-injection
+js/unsafe-shell-command-construction
+js/shell-command-injection-from-environment
+js/request-forgery
+js/client-side-url-redirect
+js/improper-code-sanitization
+js/regex-injection
+js/resource-exhaustion
+js/stored-xss
+js/insufficient-password-hash
+js/clear-text-logging
+js/broken-cryptographic-algorithm
+js/polynomial-redos
+js/insecure-temporary-file
+js/indirect-command-injection
+js/conditional-bypass
+js/file-access-to-http
+js/remote-property-injection
+js/incomplete-html-attribute-sanitization
+js/prototype-polluting-assignment
+js/unvalidated-dynamic-method-call

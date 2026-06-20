@@ -1,0 +1,185 @@
+rules:
+  # ──────────────────────────────────────────────
+  # Cat-1: Prompt Handling
+  # Symptoms: prompt injection via unsanitized input,
+  #           memory contamination,
+  #           missing output filtering
+  # Patterns derived from real OpenClaw GHSAs.
+  # ──────────────────────────────────────────────
+
+  # PH-1: Workspace / CWD path interpolated into a system prompt
+  # without stripping control/format/bidi characters.
+  # Catches: GHSA-2qj5-gwg2-xwc4 (OC-19, "Unsanitized CWD path injection
+  # into LLM prompts" — workspaceDir was inlined into systemPrompt).
+  - id: workspace-path-into-system-prompt
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      A workspace / cwd / directory path is interpolated into a system
+      prompt or prompt template without sanitization. A directory name
+      can contain newlines, Unicode bidi marks, or zero-width characters
+      that break prompt structure and inject attacker-controlled
+      instructions. Wrap with sanitizePromptText() / strip control chars
+      before interpolating.
+    metadata:
+      cwe:
+        - "CWE-20: Improper Input Validation"
+        - "CWE-77: Improper Neutralization of Special Elements used in a Command"
+      category: security
+      confidence: MEDIUM
+      impact: HIGH
+      cat: "Cat-1: Prompt Handling"
+      example_advisory: "GHSA-2qj5-gwg2-xwc4"
+    pattern-either:
+      - patterns:
+          - pattern: |
+              `...${$VAR}...`
+          - metavariable-regex:
+              metavariable: $VAR
+              regex: '.*(workspaceDir|workspacePath|cwd|currentDir|workingDir|projectDir|projectRoot)$'
+          - pattern-inside: |
+              function $F(...) { ... }
+          - pattern-not-inside: |
+              sanitizePromptText(...)
+          - pattern-not-inside: |
+              stripControlChars(...)
+      - patterns:
+          - pattern: |
+              systemPrompt = `...${$VAR}...`
+          - metavariable-regex:
+              metavariable: $VAR
+              regex: '.*(workspace|cwd|dir|path|root).*'
+
+  # PH-2: ACP resource_link metadata (title / uri) interpolated into
+  # prompt text without escaping delimiter / control characters.
+  # Catches: GHSA-74xj-763f-264w (ACP resource_link prompt injection).
+  - id: resource-link-metadata-into-prompt
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      Resource-link / attachment metadata (title, uri, name, description)
+      is interpolated directly into prompt text. These fields are
+      attacker-influenced — use escapePromptDelimiters() or render them
+      inside an explicit fenced block to avoid prompt injection.
+    metadata:
+      cwe:
+        - "CWE-20: Improper Input Validation"
+        - "CWE-77: Improper Neutralization of Special Elements used in a Command"
+      category: security
+      confidence: MEDIUM
+      impact: HIGH
+      cat: "Cat-1: Prompt Handling"
+      example_advisory: "GHSA-74xj-763f-264w"
+    pattern-either:
+      - patterns:
+          - pattern: |
+              `...${$BLOCK.title}...${$BLOCK.uri}...`
+      - patterns:
+          - pattern: |
+              `[Resource link${$X}] ${$Y}`
+      - patterns:
+          - pattern-either:
+              - pattern: |
+                  `...${$B.title}...`
+              - pattern: |
+                  `...${$B.uri}...`
+              - pattern: |
+                  `...${$B.name}...`
+              - pattern: |
+                  `...${$B.description}...`
+          - pattern-inside: |
+              function $F($P: ContentBlock[], ...) { ... }
+
+  # PH-3: HTTP/WS request headers (Origin, User-Agent, Referer) logged
+  # without neutralization — feeds indirect prompt injection when logs
+  # are later read by an LLM (log poisoning).
+  # Catches: GHSA-g27f-9qjv-22pm (OpenClaw log poisoning via WS headers).
+  - id: untrusted-header-into-log
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      A request header (Origin, User-Agent, Referer, X-Forwarded-For,
+      etc.) is concatenated into a log message without neutralization
+      or length limit. If logs are later ingested by an LLM (AI-assisted
+      debugging, agent context), an unauthenticated client can poison
+      the log to inject prompt content. Pass headers through
+      neutralizeForLog() / truncate, or log them as structured fields.
+    metadata:
+      cwe:
+        - "CWE-117: Improper Output Neutralization for Logs"
+        - "CWE-20: Improper Input Validation"
+      category: security
+      confidence: MEDIUM
+      impact: MEDIUM
+      cat: "Cat-1: Prompt Handling"
+      example_advisory: "GHSA-g27f-9qjv-22pm"
+    pattern-either:
+      - patterns:
+          - pattern-either:
+              - pattern: |
+                  $LOG.info(`...${$VAR}...`, ...)
+              - pattern: |
+                  $LOG.warn(`...${$VAR}...`, ...)
+              - pattern: |
+                  $LOG.error(`...${$VAR}...`, ...)
+              - pattern: |
+                  $LOG.debug(`...${$VAR}...`, ...)
+              - pattern: |
+                  console.log(`...${$VAR}...`, ...)
+              - pattern: |
+                  console.warn(`...${$VAR}...`, ...)
+              - pattern: |
+                  console.error(`...${$VAR}...`, ...)
+              - pattern: |
+                  logFn(`...${$VAR}...`, ...)
+          - metavariable-regex:
+              metavariable: $VAR
+              regex: '.*(origin|userAgent|user_agent|referer|referrer|forwardedFor|forwarded_for|xForwardedFor|realIp|host).*'
+          - pattern-not-inside: |
+              neutralizeForLog(...)
+          - pattern-not-inside: |
+              truncate(...)
+
+  # PH-4: Memory store (memory.md / memory-core / appendMemory) is
+  # written with externally-derived content. Memory is read back into
+  # future prompts, so untrusted content here causes persistent
+  # cross-session prompt injection.
+  - id: memory-write-untrusted-content
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: >
+      A memory store (memory.md, memory-core, appendMemory, writeMemory)
+      receives content that is not clearly internal. Memory is replayed
+      into future prompts as trusted context — sanitize, fence, or
+      restrict writes to trusted callers to prevent persistent prompt
+      injection ("memory contamination").
+    metadata:
+      cwe:
+        - "CWE-913: Improper Control of Dynamically-Managed Code Resources"
+        - "CWE-20: Improper Input Validation"
+      category: security
+      confidence: LOW
+      impact: HIGH
+      cat: "Cat-1: Prompt Handling"
+    pattern-either:
+      - patterns:
+          - pattern-either:
+              - pattern: fs.writeFile($PATH, $CONTENT, ...)
+              - pattern: fs.writeFileSync($PATH, $CONTENT, ...)
+              - pattern: fs.appendFile($PATH, $CONTENT, ...)
+              - pattern: fs.appendFileSync($PATH, $CONTENT, ...)
+              - pattern: writeFile($PATH, $CONTENT, ...)
+              - pattern: appendFile($PATH, $CONTENT, ...)
+          - metavariable-regex:
+              metavariable: $PATH
+              regex: '.*(memory\.md|memoryFile|memory_file|memoryStore|memory-core|memoryCore).*'
+          - pattern-not-inside: |
+              sanitizeMemory(...)
+      - patterns:
+          - pattern-either:
+              - pattern: appendMemory($CONTENT, ...)
+              - pattern: writeMemory($CONTENT, ...)
+              - pattern: $X.appendMemory($CONTENT, ...)
+              - pattern: $X.writeMemory($CONTENT, ...)
+          - pattern-not-inside: |
+              sanitizeMemory(...)
